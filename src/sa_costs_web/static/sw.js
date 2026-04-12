@@ -1,11 +1,18 @@
-const CACHE_NAME = "energy-costs-shell-v2";
+const CACHE_NAME = "energy-costs-shell-v3";
 const APP_SHELL = [
-  "/",
   "/static/app.css",
   "/static/app.js",
   "/static/icon.svg",
   "/manifest.webmanifest"
 ];
+
+function isDocumentRequest(request) {
+  return request.mode === "navigate" || request.destination === "document";
+}
+
+function isCacheableResponse(response) {
+  return Boolean(response) && response.status === 200 && response.type === "basic" && !response.redirected;
+}
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
@@ -37,6 +44,12 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
+  // Let the browser handle HTML navigations because auth flows use redirects.
+  if (isDocumentRequest(event.request)) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(function (cachedResponse) {
       if (cachedResponse) {
@@ -45,7 +58,7 @@ self.addEventListener("fetch", function (event) {
 
       return fetch(event.request)
         .then(function (networkResponse) {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== "basic") {
+          if (!isCacheableResponse(networkResponse)) {
             return networkResponse;
           }
           const responseToCache = networkResponse.clone();
@@ -53,9 +66,6 @@ self.addEventListener("fetch", function (event) {
             cache.put(event.request, responseToCache);
           });
           return networkResponse;
-        })
-        .catch(function () {
-          return caches.match("/");
         });
     })
   );
