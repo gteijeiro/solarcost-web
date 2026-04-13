@@ -19,17 +19,36 @@
     <div class="app-shell{% if current_user %} app-shell-authenticated{% endif %}">
       {% if current_user %}
         <aside class="sidebar" id="site-nav" data-nav>
-          <div class="sidebar-brand">
-            <p class="eyebrow">Energy Costs</p>
-            <h1 class="sidebar-title">Calculadora de costo electrico</h1>
+          <div class="sidebar-topline">
+            <div class="sidebar-brand">
+              <p class="eyebrow">Energy Costs</p>
+              <h1 class="sidebar-title">Calculadora de costo electrico</h1>
+            </div>
+            <button
+              type="button"
+              class="ghost-button sidebar-collapse-toggle"
+              data-sidebar-collapse
+              aria-pressed="false"
+              aria-label="Achicar menu"
+            >
+              <span class="sidebar-collapse-label">Achicar menu</span>
+            </button>
           </div>
           <nav class="sidebar-links">
-            <a class="sidebar-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a class="sidebar-link" href="{{ url_for('dashboard') }}">
+              <span class="sidebar-link-text">Dashboard</span>
+            </a>
             {% if can_manage %}
-              <a class="sidebar-link" href="{{ url_for('periods') }}">Periodos</a>
-              <a class="sidebar-link" href="{{ url_for('settings') }}">Configuracion</a>
+              <a class="sidebar-link" href="{{ url_for('periods') }}">
+                <span class="sidebar-link-text">Periodos</span>
+              </a>
+              <a class="sidebar-link" href="{{ url_for('settings') }}">
+                <span class="sidebar-link-text">Configuracion</span>
+              </a>
             {% endif %}
-            <a class="sidebar-link" href="{{ url_for('account') }}">Cuenta</a>
+            <a class="sidebar-link" href="{{ url_for('account') }}">
+              <span class="sidebar-link-text">Cuenta</span>
+            </a>
           </nav>
           <div class="sidebar-actions">
             <button type="button" class="ghost-button install-button sidebar-action-button" data-install-button hidden>Instalar app</button>

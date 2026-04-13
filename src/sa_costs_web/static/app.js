@@ -4,7 +4,9 @@
   var navToggle = document.querySelector("[data-nav-toggle]");
   var navBackdrop = document.querySelector("[data-nav-backdrop]");
   var installButton = document.querySelector("[data-install-button]");
+  var sidebarCollapseButton = document.querySelector("[data-sidebar-collapse]");
   var compactNavQuery = window.matchMedia("(max-width: 1080px)");
+  var sidebarCompactStorageKey = "sa-costs-sidebar-compact";
   var chartMode = "area";
   var chartEntries = [];
 
@@ -41,6 +43,40 @@
     }
   }
 
+  function setSidebarCompact(isCompact) {
+    if (isCompactNav()) {
+      document.body.classList.remove("sidebar-compact");
+      if (sidebarCollapseButton) {
+        sidebarCollapseButton.setAttribute("aria-pressed", "false");
+        sidebarCollapseButton.setAttribute("aria-label", "Achicar menu");
+        var resetLabel = sidebarCollapseButton.querySelector(".sidebar-collapse-label");
+        if (resetLabel) {
+          resetLabel.textContent = "Achicar menu";
+        }
+      }
+      return;
+    }
+
+    document.body.classList.toggle("sidebar-compact", isCompact);
+    if (sidebarCollapseButton) {
+      sidebarCollapseButton.setAttribute("aria-pressed", isCompact ? "true" : "false");
+      sidebarCollapseButton.setAttribute("aria-label", isCompact ? "Expandir menu" : "Achicar menu");
+      var label = sidebarCollapseButton.querySelector(".sidebar-collapse-label");
+      if (label) {
+        label.textContent = isCompact ? "Expandir menu" : "Achicar menu";
+      }
+    }
+    window.localStorage.setItem(sidebarCompactStorageKey, isCompact ? "1" : "0");
+  }
+
+  function restoreSidebarCompactPreference() {
+    if (isCompactNav()) {
+      setSidebarCompact(false);
+      return;
+    }
+    setSidebarCompact(window.localStorage.getItem(sidebarCompactStorageKey) === "1");
+  }
+
   function formatNumber(value, decimals) {
     return Number(value || 0).toLocaleString("es-AR", {
       minimumFractionDigits: decimals,
@@ -73,6 +109,7 @@
   }
 
   function buildSeries(config, mode) {
+    var isMobile = window.innerWidth <= 720;
     return config.datasets.map(function (dataset) {
       var common = {
         name: dataset.label,
@@ -84,7 +121,7 @@
       if (mode === "bar") {
         return Object.assign({}, common, {
           type: "bar",
-          barMaxWidth: 28,
+          barMaxWidth: isMobile ? 18 : 28,
           itemStyle: {
             color: dataset.color,
             borderRadius: [8, 8, 0, 0]
@@ -95,11 +132,11 @@
       return Object.assign({}, common, {
         type: "line",
         smooth: false,
-        showSymbol: true,
+        showSymbol: !isMobile || config.labels.length <= 8,
         symbol: "circle",
-        symbolSize: 7,
+        symbolSize: isMobile ? 5 : 7,
         lineStyle: {
-          width: 2.5,
+          width: isMobile ? 2 : 2.5,
           color: dataset.color
         },
         itemStyle: {
@@ -114,6 +151,7 @@
 
   function buildChartOption(config, mode) {
     var darkArea = mode === "area";
+    var isMobile = window.innerWidth <= 720;
     var axisColor = darkArea ? "rgba(255,255,255,0.72)" : "#59676b";
     var lineColor = darkArea ? "rgba(255,255,255,0.10)" : "rgba(31,42,46,0.10)";
 
@@ -124,10 +162,10 @@
         fontFamily: "Manrope, sans-serif"
       },
       grid: {
-        left: 64,
-        right: 22,
-        top: 28,
-        bottom: 60
+        left: isMobile ? 48 : 64,
+        right: isMobile ? 12 : 22,
+        top: isMobile ? 22 : 28,
+        bottom: isMobile ? 70 : 60
       },
       tooltip: {
         trigger: "axis",
@@ -165,10 +203,11 @@
         axisTick: { show: false },
         axisLabel: {
           color: axisColor,
-          fontSize: 11,
-          margin: 12,
-          interval: 0,
-          rotate: config.labels.length > 6 ? 16 : 0
+          fontSize: isMobile ? 10 : 11,
+          margin: isMobile ? 10 : 12,
+          interval: "auto",
+          hideOverlap: true,
+          rotate: isMobile ? 0 : (config.labels.length > 8 ? 12 : 0)
         }
       },
       yAxis: {
@@ -180,7 +219,7 @@
         axisTick: { show: false },
         axisLabel: {
           color: axisColor,
-          fontSize: 11,
+          fontSize: isMobile ? 10 : 11,
           formatter: function (value) {
             return formatAxisTick(value, config.value_kind);
           }
@@ -194,17 +233,18 @@
   }
 
   function resolveChartHeight() {
-    return window.innerWidth <= 720 ? 360 : 420;
-  }
-
-  function resolveChartWidth(config, root) {
-    var containerWidth = root.parentElement ? root.parentElement.clientWidth : root.clientWidth;
-    var perLabel = window.innerWidth <= 720 ? 120 : 92;
-    return Math.max(containerWidth, config.labels.length * perLabel);
+    if (window.innerWidth <= 720) {
+      return 420;
+    }
+    if (window.innerWidth <= 1080) {
+      return 400;
+    }
+    return 460;
   }
 
   function applyChartSize(entry) {
-    entry.root.style.width = resolveChartWidth(entry.config, entry.root) + "px";
+    var parentWidth = entry.root.parentElement ? entry.root.parentElement.clientWidth : entry.root.clientWidth;
+    entry.root.style.width = Math.max(parentWidth, 0) + "px";
     entry.root.style.height = resolveChartHeight() + "px";
   }
 
@@ -261,6 +301,16 @@
     });
   }
 
+  if (sidebarCollapseButton) {
+    sidebarCollapseButton.addEventListener("click", function () {
+      if (isCompactNav()) {
+        return;
+      }
+      setSidebarCompact(!document.body.classList.contains("sidebar-compact"));
+      window.requestAnimationFrame(renderCharts);
+    });
+  }
+
   if (navBackdrop) {
     navBackdrop.addEventListener("click", function () {
       setNavOpen(false);
@@ -309,10 +359,12 @@
 
   window.addEventListener("resize", function () {
     syncNavState();
+    restoreSidebarCompactPreference();
     renderCharts();
   });
 
   syncNavState();
+  restoreSidebarCompactPreference();
 
   window.addEventListener("beforeinstallprompt", function (event) {
     event.preventDefault();
