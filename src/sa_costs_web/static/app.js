@@ -4,9 +4,7 @@
   var navToggle = document.querySelector("[data-nav-toggle]");
   var navBackdrop = document.querySelector("[data-nav-backdrop]");
   var installButton = document.querySelector("[data-install-button]");
-  var sidebarCollapseButton = document.querySelector("[data-sidebar-collapse]");
   var compactNavQuery = window.matchMedia("(max-width: 1080px)");
-  var sidebarCompactStorageKey = "sa-costs-sidebar-compact";
   var chartMode = "area";
   var chartEntries = [];
 
@@ -41,40 +39,6 @@
         navBackdrop.hidden = true;
       }
     }
-  }
-
-  function setSidebarCompact(isCompact) {
-    if (isCompactNav()) {
-      document.body.classList.remove("sidebar-compact");
-      if (sidebarCollapseButton) {
-        sidebarCollapseButton.setAttribute("aria-pressed", "false");
-        sidebarCollapseButton.setAttribute("aria-label", "Achicar menu");
-        var resetLabel = sidebarCollapseButton.querySelector(".sidebar-collapse-label");
-        if (resetLabel) {
-          resetLabel.textContent = "Achicar menu";
-        }
-      }
-      return;
-    }
-
-    document.body.classList.toggle("sidebar-compact", isCompact);
-    if (sidebarCollapseButton) {
-      sidebarCollapseButton.setAttribute("aria-pressed", isCompact ? "true" : "false");
-      sidebarCollapseButton.setAttribute("aria-label", isCompact ? "Expandir menu" : "Achicar menu");
-      var label = sidebarCollapseButton.querySelector(".sidebar-collapse-label");
-      if (label) {
-        label.textContent = isCompact ? "Expandir menu" : "Achicar menu";
-      }
-    }
-    window.localStorage.setItem(sidebarCompactStorageKey, isCompact ? "1" : "0");
-  }
-
-  function restoreSidebarCompactPreference() {
-    if (isCompactNav()) {
-      setSidebarCompact(false);
-      return;
-    }
-    setSidebarCompact(window.localStorage.getItem(sidebarCompactStorageKey) === "1");
   }
 
   function formatNumber(value, decimals) {
@@ -243,18 +207,14 @@
   }
 
   function applyChartSize(entry) {
-    var parentWidth = entry.root.parentElement ? entry.root.parentElement.clientWidth : entry.root.clientWidth;
-    entry.root.style.width = Math.max(parentWidth, 0) + "px";
+    entry.root.style.width = "100%";
     entry.root.style.height = resolveChartHeight() + "px";
   }
 
   function renderCharts() {
     chartEntries.forEach(function (entry) {
       applyChartSize(entry);
-      entry.chart.resize({
-        width: entry.root.clientWidth,
-        height: entry.root.clientHeight
-      });
+      entry.chart.resize();
       entry.chart.setOption(buildChartOption(entry.config, chartMode), true);
     });
   }
@@ -298,16 +258,6 @@
         return;
       }
       setNavOpen(!nav.classList.contains("is-open"));
-    });
-  }
-
-  if (sidebarCollapseButton) {
-    sidebarCollapseButton.addEventListener("click", function () {
-      if (isCompactNav()) {
-        return;
-      }
-      setSidebarCompact(!document.body.classList.contains("sidebar-compact"));
-      window.requestAnimationFrame(renderCharts);
     });
   }
 
@@ -359,12 +309,10 @@
 
   window.addEventListener("resize", function () {
     syncNavState();
-    restoreSidebarCompactPreference();
     renderCharts();
   });
 
   syncNavState();
-  restoreSidebarCompactPreference();
 
   window.addEventListener("beforeinstallprompt", function (event) {
     event.preventDefault();

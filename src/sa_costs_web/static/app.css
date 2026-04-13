@@ -54,10 +54,6 @@ body.nav-open {
   gap: 0;
 }
 
-body.sidebar-compact .app-shell-authenticated {
-  grid-template-columns: 218px minmax(0, 1fr);
-}
-
 .page-shell {
   width: 100%;
   max-width: 1480px;
@@ -90,10 +86,7 @@ body.sidebar-compact .app-shell-authenticated {
 }
 
 .sidebar-topline {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  display: block;
 }
 
 .sidebar-brand {
@@ -118,7 +111,7 @@ body.sidebar-compact .app-shell-authenticated {
 }
 
 .sidebar-actions {
-  margin-top: 4px;
+  margin-top: auto;
 }
 
 .sidebar-link {
@@ -154,43 +147,6 @@ body.sidebar-compact .app-shell-authenticated {
 .sidebar-action-button {
   width: 100%;
   justify-content: center;
-}
-
-.sidebar-collapse-toggle {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0 14px;
-  white-space: nowrap;
-}
-
-.sidebar-collapse-label {
-  display: inline-flex;
-}
-
-body.sidebar-compact .sidebar {
-  padding-inline: 12px;
-}
-
-body.sidebar-compact .sidebar-title {
-  display: none;
-}
-
-body.sidebar-compact .sidebar-brand {
-  gap: 2px;
-  padding-inline: 4px;
-}
-
-body.sidebar-compact .sidebar-link,
-body.sidebar-compact .sidebar-action-button {
-  min-height: 46px;
-  padding-inline: 14px;
-  font-size: 0.92rem;
-}
-
-body.sidebar-compact .sidebar-user {
-  display: grid;
-  justify-content: stretch;
-  gap: 6px;
 }
 
 .nav-backdrop {
@@ -1171,6 +1127,7 @@ tbody tr:hover {
   background: rgba(255, 255, 255, 0.68);
   display: grid;
   gap: 16px;
+  overflow: hidden;
 }
 
 .chart-card-header {
@@ -1178,6 +1135,7 @@ tbody tr:hover {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .chart-card h3 {
@@ -1193,6 +1151,7 @@ tbody tr:hover {
 .echart-root {
   display: block;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   min-height: 460px;
 }
@@ -1338,10 +1297,6 @@ code {
     z-index: 40;
   }
 
-  body.sidebar-compact .app-shell-authenticated {
-    grid-template-columns: 1fr;
-  }
-
   .sidebar.is-open {
     transform: translateX(0);
   }
@@ -1444,10 +1399,6 @@ code {
     padding: 18px 14px;
   }
 
-  .sidebar-topline {
-    align-items: center;
-  }
-
   .sidebar-title {
     font-size: 1.65rem;
   }
@@ -1456,10 +1407,6 @@ code {
   .sidebar-action-button {
     min-height: 48px;
     padding-inline: 14px;
-  }
-
-  .sidebar-collapse-toggle {
-    display: none;
   }
 
   .nav-user {
@@ -1483,10 +1430,6 @@ code {
 
   .chart-card {
     padding: 16px 14px;
-  }
-
-  .echart-root {
-    min-height: 420px;
   }
 
   .responsive-detail-table,
@@ -1590,10 +1533,6 @@ code {
   .chart-card {
     padding: 12px;
     gap: 14px;
-  }
-
-  .chart-stage {
-    margin-inline: -4px;
   }
 
   .echart-root {
