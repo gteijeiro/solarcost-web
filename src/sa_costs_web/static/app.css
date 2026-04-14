@@ -16,6 +16,8 @@
   --success: #047857;
   --shadow: 0 24px 80px rgba(31, 42, 46, 0.12);
   --radius: 24px;
+  --color-money: #0f766e;
+  --color-energy: #2563eb;
 }
 
 * {
@@ -52,6 +54,28 @@ body.nav-open {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 0;
+}
+
+body.sidebar-hidden .app-shell-authenticated {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body.sidebar-hidden .sidebar {
+  display: none;
+}
+
+.sidebar-hide-button {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.sidebar-show-button {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 24px rgba(31, 42, 46, 0.07);
+  font-weight: 700;
 }
 
 .page-shell {
@@ -187,6 +211,14 @@ body.nav-open {
 
 .topbar-authenticated .topbar-brand {
   display: none;
+}
+
+body.sidebar-hidden .topbar-authenticated .topbar-brand {
+  display: block;
+}
+
+body.sidebar-hidden .topbar-authenticated {
+  justify-content: space-between;
 }
 
 .eyebrow {
@@ -1109,6 +1141,16 @@ tbody tr:hover {
   color: var(--text);
 }
 
+.val-money {
+  color: var(--color-money);
+  font-weight: 700;
+}
+
+.val-energy {
+  color: var(--color-energy);
+  font-weight: 700;
+}
+
 .chart-collection {
   display: grid;
   gap: 20px;
@@ -1299,6 +1341,11 @@ code {
 
   .sidebar.is-open {
     transform: translateX(0);
+  }
+
+  .sidebar-hide-button,
+  .sidebar-show-button {
+    display: none !important;
   }
 
   .topbar-authenticated {

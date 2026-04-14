@@ -4,7 +4,10 @@
   var navToggle = document.querySelector("[data-nav-toggle]");
   var navBackdrop = document.querySelector("[data-nav-backdrop]");
   var installButton = document.querySelector("[data-install-button]");
+  var sidebarHideButton = document.querySelector("[data-sidebar-hide]");
+  var sidebarShowButton = document.querySelector("[data-sidebar-show]");
   var compactNavQuery = window.matchMedia("(max-width: 1080px)");
+  var sidebarHiddenKey = "sa-costs-sidebar-hidden";
   var chartMode = "area";
   var chartEntries = [];
 
@@ -39,6 +42,28 @@
         navBackdrop.hidden = true;
       }
     }
+  }
+
+  function setSidebarHidden(hidden) {
+    if (isCompactNav()) {
+      return;
+    }
+    document.body.classList.toggle("sidebar-hidden", hidden);
+    if (sidebarShowButton) {
+      sidebarShowButton.hidden = !hidden;
+    }
+    window.localStorage.setItem(sidebarHiddenKey, hidden ? "1" : "0");
+  }
+
+  function restoreSidebarHiddenPreference() {
+    if (isCompactNav()) {
+      document.body.classList.remove("sidebar-hidden");
+      if (sidebarShowButton) {
+        sidebarShowButton.hidden = true;
+      }
+      return;
+    }
+    setSidebarHidden(window.localStorage.getItem(sidebarHiddenKey) === "1");
   }
 
   function formatNumber(value, decimals) {
@@ -267,6 +292,20 @@
     });
   }
 
+  if (sidebarHideButton) {
+    sidebarHideButton.addEventListener("click", function () {
+      setSidebarHidden(true);
+      window.requestAnimationFrame(renderCharts);
+    });
+  }
+
+  if (sidebarShowButton) {
+    sidebarShowButton.addEventListener("click", function () {
+      setSidebarHidden(false);
+      window.requestAnimationFrame(renderCharts);
+    });
+  }
+
   document.addEventListener("click", function (event) {
     var chartButton = event.target.closest("[data-chart-mode-button]");
     if (chartButton) {
@@ -309,10 +348,12 @@
 
   window.addEventListener("resize", function () {
     syncNavState();
+    restoreSidebarHiddenPreference();
     renderCharts();
   });
 
   syncNavState();
+  restoreSidebarHiddenPreference();
 
   window.addEventListener("beforeinstallprompt", function (event) {
     event.preventDefault();

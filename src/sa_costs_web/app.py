@@ -142,12 +142,12 @@ def create_app(config: WebConfig) -> Flask:
     app.extensions["web_config"] = config
 
     @app.template_filter("money")
-    def money_filter(value: Any) -> str:
-        return format_money_value(value)
+    def money_filter(value: Any) -> Markup:
+        return Markup(f'<span class="val-money">{format_money_value(value)}</span>')
 
     @app.template_filter("kwh")
-    def kwh_filter(value: Any) -> str:
-        return format_kwh_value(value)
+    def kwh_filter(value: Any) -> Markup:
+        return Markup(f'<span class="val-energy">{format_kwh_value(value)}</span>')
 
     @app.template_filter("percent")
     def percent_filter(value: Any) -> str:

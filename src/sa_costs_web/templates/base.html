@@ -50,6 +50,7 @@
             <form method="post" action="{{ url_for('logout') }}">
               <button type="submit" class="ghost-button sidebar-action-button">Salir</button>
             </form>
+            <button type="button" class="ghost-button sidebar-action-button sidebar-hide-button" data-sidebar-hide>Ocultar menu</button>
           </div>
         </aside>
       {% endif %}
@@ -61,6 +62,7 @@
             <h1 class="topbar-title">Calculadora de costo electrico</h1>
           </div>
           {% if current_user %}
+            <button type="button" class="ghost-button sidebar-show-button" data-sidebar-show hidden>Menu</button>
             <button type="button" class="nav-toggle" data-nav-toggle aria-controls="site-nav" aria-expanded="false" aria-label="Abrir menu">
               <span class="nav-toggle-icon" aria-hidden="true">
                 <span></span>
