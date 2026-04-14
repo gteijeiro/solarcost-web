@@ -37,7 +37,13 @@ Aplicacion web en Python para calcular el costo de la luz consumiendo la API del
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install .
+```
+
+Tambien puedes instalarla directamente desde GitHub:
+
+```bash
+pipx install "git+https://github.com/gteijeiro/solar-assistant-costs-costs-web.git"
 ```
 
 ## Ejecucion
@@ -45,10 +51,9 @@ pip install -r requirements.txt
 Primero asegúrate de tener el bridge levantado.
 
 ```bash
-source .venv/bin/activate
 export SA_COSTS_BRIDGE_URL="http://127.0.0.1:8765"
 export SA_COSTS_SECRET_KEY="GENERA_AQUI_UN_SECRETO_LARGO_Y_UNICO"
-PYTHONPATH=src python -m sa_costs_web
+sa-costs-web
 ```
 
 La web queda por defecto en:
@@ -130,3 +135,18 @@ Cada periodo tiene solo fecha de inicio. El fin se calcula automaticamente:
 - al crear un periodo nuevo, la app copia primero los cargos fijos del ultimo periodo anterior que ya tenga valores propios,
 - si no existe un periodo anterior con cargos fijos, copia la plantilla,
 - despues puedes editar los importes del mes cuando llegue la factura real.
+
+## Build y publicacion
+
+Build local:
+
+```bash
+python -m pip install --upgrade build
+python -m build
+```
+
+El repo incluye workflows de GitHub Actions para:
+
+- CI en `push` y `pull_request`,
+- publicacion manual a TestPyPI con `workflow_dispatch`,
+- publicacion a PyPI al crear un tag `v*`.

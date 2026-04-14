@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "solar-assistant-costs-web"
+version = "0.1.0"
+description = "Aplicacion web para calcular el costo de la luz usando el bridge de SolarAssistant."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Guillermo Teijeiro", email = "gteijeiro29@gmail.com" }
+]
+keywords = ["solarassistant", "energy", "billing", "flask", "dashboard"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Web Environment",
+  "Framework :: Flask",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+  "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+  "Flask>=3,<4",
+]
+
+[project.scripts]
+sa-costs-web = "sa_costs_web.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/gteijeiro/solar-assistant-costs-costs-web"
+Repository = "https://github.com/gteijeiro/solar-assistant-costs-costs-web"
+Issues = "https://github.com/gteijeiro/solar-assistant-costs-costs-web/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sa_costs_web*"]
+
+[tool.setuptools.package-data]
+sa_costs_web = ["templates/*.html", "static/*"]
