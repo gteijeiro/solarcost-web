@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import sys
 
 from .app import create_app
 from .config import WebConfig
+from .install import run_init
 
 
 def configure_logging(level: str) -> None:
@@ -14,7 +16,13 @@ def configure_logging(level: str) -> None:
 
 
 def main() -> None:
-    config = WebConfig.from_args()
+    argv = sys.argv[1:]
+    if argv and argv[0] == "init":
+        raise SystemExit(run_init(argv[1:]))
+    if argv and argv[0] == "run":
+        argv = argv[1:]
+
+    config = WebConfig.from_args(argv)
     configure_logging(config.log_level)
     app = create_app(config)
     app.logger.info("energy costs web listening on http://%s:%s", config.bind_host, config.bind_port)

@@ -21,7 +21,7 @@ class WebConfig:
     http_timeout: float
 
     @classmethod
-    def from_args(cls) -> "WebConfig":
+    def from_args(cls, argv: list[str] | None = None) -> "WebConfig":
         parser = argparse.ArgumentParser(
             description="Web app para calcular el costo de la luz usando el bridge de SolarAssistant."
         )
@@ -42,7 +42,7 @@ class WebConfig:
             type=float,
             default=float(os.getenv("SA_COSTS_HTTP_TIMEOUT", "10")),
         )
-        args = parser.parse_args()
+        args = parser.parse_args(argv)
 
         return cls(
             bridge_url=args.bridge_url.rstrip("/"),

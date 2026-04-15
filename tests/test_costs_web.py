@@ -12,6 +12,7 @@ from sa_costs_web.app import create_app
 from sa_costs_web.calculator import BridgeData, calculate_period_summary
 from sa_costs_web.config import WebConfig
 from sa_costs_web.db import CostsRepository
+from sa_costs_web.install import WebInstallConfig, build_env_file as build_web_env_file, build_service_file as build_web_service_file
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -685,6 +686,58 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(period_fixed[0]["alias"], "cargo_fijo_febrero")
         self.assertEqual(period_taxes[0]["alias"], "fondep")
         self.assertNotIn("Factura marzo 2026", [period["name"] for period in periods])
+
+
+class WebInstallerTests(unittest.TestCase):
+    def test_build_env_file_contains_expected_values(self) -> None:
+        config = WebInstallConfig(
+            runtime_dir=Path("/opt/solar-assistant/web"),
+            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
+            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            bridge_url="http://127.0.0.1:8765",
+            bind_host="0.0.0.0",
+            bind_port=8890,
+            secret_key="secret-key",
+            log_level="INFO",
+            http_timeout=10.0,
+            service_mode="system",
+            service_name="sa-costs-web.service",
+            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_user="solar-assistant",
+            service_group="solar-assistant",
+            enable_now=True,
+        )
+
+        content = build_web_env_file(config)
+
+        self.assertIn('SA_COSTS_BRIDGE_URL="http://127.0.0.1:8765"', content)
+        self.assertIn('SA_COSTS_SECRET_KEY="secret-key"', content)
+        self.assertIn('SA_COSTS_BIND_PORT="8890"', content)
+
+    def test_build_service_file_uses_current_module_execution(self) -> None:
+        config = WebInstallConfig(
+            runtime_dir=Path("/opt/solar-assistant/web"),
+            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
+            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            bridge_url="http://127.0.0.1:8765",
+            bind_host="0.0.0.0",
+            bind_port=8890,
+            secret_key="secret-key",
+            log_level="INFO",
+            http_timeout=10.0,
+            service_mode="system",
+            service_name="sa-costs-web.service",
+            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_user="solar-assistant",
+            service_group="solar-assistant",
+            enable_now=True,
+        )
+
+        content = build_web_service_file(config, Path("/opt/solar-assistant/web/.venv/bin/python"))
+
+        self.assertIn("EnvironmentFile=/opt/solar-assistant/web/costs-web.env", content)
+        self.assertIn("ExecStart=/opt/solar-assistant/web/.venv/bin/python -m sa_costs_web run", content)
+        self.assertIn("User=solar-assistant", content)
 
 
 if __name__ == "__main__":

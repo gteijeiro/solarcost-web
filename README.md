@@ -40,10 +40,44 @@ source .venv/bin/activate
 pip install .
 ```
 
+Bootstrap automatico desde el repo:
+
+```bash
+./init.sh
+```
+
 Tambien puedes instalarla directamente desde GitHub:
 
 ```bash
 pipx install "git+https://github.com/gteijeiro/solar-assistant-costs-costs-web.git"
+```
+
+Y luego ejecutar el asistente:
+
+```bash
+sa-costs-web init
+```
+
+## Despliegue rapido en Raspberry Pi
+
+1. Asegurate de tener el bridge funcionando en la misma maquina o accesible por red.
+2. Clona el repo en la Pi.
+3. Entra a la carpeta del proyecto.
+4. Ejecuta `./init.sh`.
+5. Responde el asistente interactivo y apunta `SA_COSTS_BRIDGE_URL` al bridge, por ejemplo `http://127.0.0.1:8765`.
+
+Ejemplo:
+
+```bash
+git clone https://github.com/gteijeiro/solar-assistant-costs-costs-web.git
+cd solar-assistant-costs-costs-web
+./init.sh
+```
+
+Para ver logs:
+
+```bash
+sudo journalctl -u sa-costs-web.service -f
 ```
 
 ## Ejecucion
@@ -56,9 +90,21 @@ export SA_COSTS_SECRET_KEY="GENERA_AQUI_UN_SECRETO_LARGO_Y_UNICO"
 sa-costs-web
 ```
 
+Tambien puedes usar el subcomando explicito:
+
+```bash
+sa-costs-web run
+```
+
 La web queda por defecto en:
 
 - `http://127.0.0.1:8890`
+
+## Primer inicio
+
+- Al abrir la web por primera vez, si no existen usuarios, se muestra la pantalla de alta inicial.
+- Ese primer usuario queda como administrador.
+- Luego los administradores pueden crear mas usuarios, cambiar roles y deshabilitarlos.
 
 ## Variables disponibles
 
