@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "solarcost-web"
-version = "0.1.0"
+version = "0.1.1"
 description = "SolarCost web para calcular el costo de la luz usando el bridge de Solar Assistant."
 readme = "README.md"
 requires-python = ">=3.11"
