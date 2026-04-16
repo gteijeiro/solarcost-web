@@ -34,7 +34,7 @@ class WebInstallConfig:
 
 def run_init(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="sa-costs-web init",
+        prog="sa_web init",
         description="Asistente interactivo para configurar e instalar la aplicacion web.",
     )
     parser.parse_args(argv)
@@ -60,7 +60,7 @@ def prompt_install_config() -> WebInstallConfig:
             str(Path.cwd()),
         )
     ).expanduser()
-    default_env_path = runtime_dir / "costs-web.env"
+    default_env_path = runtime_dir / "solarcost-web.env"
     default_db_path = runtime_dir / "data" / "energy_costs.sqlite3"
     bridge_url = prompt_text("URL del bridge", "http://127.0.0.1:8765").rstrip("/")
     bind_host = prompt_text("Host para publicar la web", "0.0.0.0")
@@ -79,7 +79,7 @@ def prompt_install_config() -> WebInstallConfig:
         choices=("system", "user", "none"),
         default="system" if is_root() else "user",
     )
-    service_name = prompt_text("Nombre del servicio", "sa-costs-web.service")
+    service_name = prompt_text("Nombre del servicio", "solarcost-web.service")
     service_user: str | None = None
     service_group: str | None = None
     service_path: Path | None = None
@@ -142,7 +142,7 @@ def validate_install_config(install_config: WebInstallConfig) -> None:
 
 def build_env_file(install_config: WebInstallConfig) -> str:
     lines = [
-        "# Solar Assistant Costs Web",
+        "# SolarCost Web",
         env_line("SA_COSTS_BRIDGE_URL", install_config.bridge_url),
         env_line("SA_COSTS_BIND_HOST", install_config.bind_host),
         env_line("SA_COSTS_BIND_PORT", str(install_config.bind_port)),
@@ -166,7 +166,7 @@ def build_service_file(install_config: WebInstallConfig, python_executable: Path
 
     service_lines = [
         "[Unit]",
-        "Description=Solar Assistant Costs Web",
+        "Description=SolarCost Web",
         "Wants=network-online.target",
         "After=network-online.target",
         "",
@@ -223,13 +223,13 @@ def print_summary(install_config: WebInstallConfig) -> None:
 
 def permission_help(install_config: WebInstallConfig) -> str:
     executable = Path(sys.argv[0]).expanduser()
-    service_path = install_config.service_path or Path("/etc/systemd/system/sa-costs-web.service")
+    service_path = install_config.service_path or Path("/etc/systemd/system/solarcost-web.service")
     return (
         "Para instalar un servicio de sistema debes ejecutar el asistente con permisos de root. "
-        "Si el paquete esta dentro de un .venv, `sudo sa-costs-web init` normalmente no funciona "
+        "Si el paquete esta dentro de un .venv, `sudo sa_web init` normalmente no funciona "
         "porque sudo no encuentra el binario del entorno virtual. "
         f"Usa alguno de estos comandos:\n"
-        f"- sudo \"$(command -v sa-costs-web)\" init\n"
+        f"- sudo \"$(command -v sa_web)\" init\n"
         f"- sudo {executable} init\n"
         "Si prefieres no usar sudo, elige `user` como modo de servicio. "
         f"El unit file de sistema se intentaba escribir en {service_path}."

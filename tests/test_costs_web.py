@@ -461,7 +461,7 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("attachment; filename=", response.headers.get("Content-Disposition", ""))
 
         payload = json.loads(response.get_data(as_text=True))
-        self.assertEqual(payload["format"], "sa-costs-web-config")
+        self.assertEqual(payload["format"], "solarcost-web-config")
         self.assertEqual(payload["schema_version"], 2)
         self.assertNotIn("users", payload["data"])
         self.assertNotIn("password_hash", response.get_data(as_text=True))
@@ -542,7 +542,7 @@ class WebAppTests(unittest.TestCase):
             )
 
         import_payload = {
-            "format": "sa-costs-web-config",
+            "format": "solarcost-web-config",
             "schema_version": 2,
             "exported_at": "2026-04-14T00:00:00+00:00",
             "data": {
@@ -702,9 +702,9 @@ class WebAppTests(unittest.TestCase):
 class WebInstallerTests(unittest.TestCase):
     def test_build_env_file_contains_expected_values(self) -> None:
         config = WebInstallConfig(
-            runtime_dir=Path("/opt/solar-assistant/web"),
-            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
-            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            runtime_dir=Path("/opt/solarcost/web"),
+            env_path=Path("/opt/solarcost/web/solarcost-web.env"),
+            db_path=Path("/opt/solarcost/web/data/energy_costs.sqlite3"),
             bridge_url="http://127.0.0.1:8765",
             bind_host="0.0.0.0",
             bind_port=8890,
@@ -712,8 +712,8 @@ class WebInstallerTests(unittest.TestCase):
             log_level="INFO",
             http_timeout=10.0,
             service_mode="system",
-            service_name="sa-costs-web.service",
-            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_name="solarcost-web.service",
+            service_path=Path("/etc/systemd/system/solarcost-web.service"),
             service_user="solar-assistant",
             service_group="solar-assistant",
             enable_now=True,
@@ -727,9 +727,9 @@ class WebInstallerTests(unittest.TestCase):
 
     def test_build_service_file_uses_current_module_execution(self) -> None:
         config = WebInstallConfig(
-            runtime_dir=Path("/opt/solar-assistant/web"),
-            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
-            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            runtime_dir=Path("/opt/solarcost/web"),
+            env_path=Path("/opt/solarcost/web/solarcost-web.env"),
+            db_path=Path("/opt/solarcost/web/data/energy_costs.sqlite3"),
             bridge_url="http://127.0.0.1:8765",
             bind_host="0.0.0.0",
             bind_port=8890,
@@ -737,24 +737,24 @@ class WebInstallerTests(unittest.TestCase):
             log_level="INFO",
             http_timeout=10.0,
             service_mode="system",
-            service_name="sa-costs-web.service",
-            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_name="solarcost-web.service",
+            service_path=Path("/etc/systemd/system/solarcost-web.service"),
             service_user="solar-assistant",
             service_group="solar-assistant",
             enable_now=True,
         )
 
-        content = build_web_service_file(config, Path("/opt/solar-assistant/web/.venv/bin/python"))
+        content = build_web_service_file(config, Path("/opt/solarcost/web/.venv/bin/python"))
 
-        self.assertIn("EnvironmentFile=/opt/solar-assistant/web/costs-web.env", content)
-        self.assertIn("ExecStart=/opt/solar-assistant/web/.venv/bin/python -m sa_costs_web run", content)
+        self.assertIn("EnvironmentFile=/opt/solarcost/web/solarcost-web.env", content)
+        self.assertIn("ExecStart=/opt/solarcost/web/.venv/bin/python -m sa_costs_web run", content)
         self.assertIn("User=solar-assistant", content)
 
     def test_validate_install_config_requires_root_for_system_service(self) -> None:
         config = WebInstallConfig(
-            runtime_dir=Path("/opt/solar-assistant/web"),
-            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
-            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            runtime_dir=Path("/opt/solarcost/web"),
+            env_path=Path("/opt/solarcost/web/solarcost-web.env"),
+            db_path=Path("/opt/solarcost/web/data/energy_costs.sqlite3"),
             bridge_url="http://127.0.0.1:8765",
             bind_host="0.0.0.0",
             bind_port=8890,
@@ -762,8 +762,8 @@ class WebInstallerTests(unittest.TestCase):
             log_level="INFO",
             http_timeout=10.0,
             service_mode="system",
-            service_name="sa-costs-web.service",
-            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_name="solarcost-web.service",
+            service_path=Path("/etc/systemd/system/solarcost-web.service"),
             service_user="solar-assistant",
             service_group="solar-assistant",
             enable_now=True,
@@ -776,9 +776,9 @@ class WebInstallerTests(unittest.TestCase):
 
     def test_permission_help_mentions_full_binary_path(self) -> None:
         config = WebInstallConfig(
-            runtime_dir=Path("/opt/solar-assistant/web"),
-            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
-            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            runtime_dir=Path("/opt/solarcost/web"),
+            env_path=Path("/opt/solarcost/web/solarcost-web.env"),
+            db_path=Path("/opt/solarcost/web/data/energy_costs.sqlite3"),
             bridge_url="http://127.0.0.1:8765",
             bind_host="0.0.0.0",
             bind_port=8890,
@@ -786,8 +786,8 @@ class WebInstallerTests(unittest.TestCase):
             log_level="INFO",
             http_timeout=10.0,
             service_mode="system",
-            service_name="sa-costs-web.service",
-            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_name="solarcost-web.service",
+            service_path=Path("/etc/systemd/system/solarcost-web.service"),
             service_user="solar-assistant",
             service_group="solar-assistant",
             enable_now=True,
@@ -796,18 +796,18 @@ class WebInstallerTests(unittest.TestCase):
         help_text = web_permission_help(config)
 
         self.assertIn("sudo", help_text)
-        self.assertIn("command -v sa-costs-web", help_text)
+        self.assertIn("command -v sa_web", help_text)
 
 
 class WebUninstallTests(unittest.TestCase):
     def test_validate_uninstall_config_requires_root_for_system_service(self) -> None:
         config = WebUninstallConfig(
-            runtime_dir=Path("/opt/solar-assistant/web"),
-            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
-            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            runtime_dir=Path("/opt/solarcost/web"),
+            env_path=Path("/opt/solarcost/web/solarcost-web.env"),
+            db_path=Path("/opt/solarcost/web/data/energy_costs.sqlite3"),
             service_mode="system",
-            service_name="sa-costs-web.service",
-            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_name="solarcost-web.service",
+            service_path=Path("/etc/systemd/system/solarcost-web.service"),
             remove_service=True,
             remove_env_file=False,
             remove_db_file=False,
@@ -822,12 +822,12 @@ class WebUninstallTests(unittest.TestCase):
 
     def test_uninstall_permission_help_mentions_subcommand(self) -> None:
         config = WebUninstallConfig(
-            runtime_dir=Path("/opt/solar-assistant/web"),
-            env_path=Path("/opt/solar-assistant/web/costs-web.env"),
-            db_path=Path("/opt/solar-assistant/web/data/energy_costs.sqlite3"),
+            runtime_dir=Path("/opt/solarcost/web"),
+            env_path=Path("/opt/solarcost/web/solarcost-web.env"),
+            db_path=Path("/opt/solarcost/web/data/energy_costs.sqlite3"),
             service_mode="system",
-            service_name="sa-costs-web.service",
-            service_path=Path("/etc/systemd/system/sa-costs-web.service"),
+            service_name="solarcost-web.service",
+            service_path=Path("/etc/systemd/system/solarcost-web.service"),
             remove_service=True,
             remove_env_file=False,
             remove_db_file=False,
@@ -838,7 +838,7 @@ class WebUninstallTests(unittest.TestCase):
         help_text = web_uninstall_permission_help(config)
 
         self.assertIn("uninstall", help_text)
-        self.assertIn("command -v sa-costs-web", help_text)
+        self.assertIn("command -v sa_web", help_text)
 
 
 if __name__ == "__main__":

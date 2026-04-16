@@ -72,7 +72,7 @@ def fetch_bridge_data(bridge_url: str, timeout: float) -> BridgeData:
 
 
 def _fetch_json(url: str, timeout: float) -> dict[str, Any]:
-    request = urllib.request.Request(url, headers={"User-Agent": "sa-costs-web/0.1"})
+    request = urllib.request.Request(url, headers={"User-Agent": "solarcost-web/0.1"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.load(response)
 

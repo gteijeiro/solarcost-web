@@ -1,4 +1,4 @@
-# Solar Assistant Costs Web
+# SolarCost Web
 
 Aplicacion web en Python para calcular el costo de la luz consumiendo la API del bridge de SolarAssistant.
 
@@ -37,20 +37,20 @@ Aplicacion web en Python para calcular el costo de la luz consumiendo la API del
 ```bash
 sudo apt update
 sudo apt install -y python3-full python3-venv
-mkdir -p /opt/solar-assistant/costs-web
-cd /opt/solar-assistant/costs-web
+mkdir -p /opt/solarcost/web
+cd /opt/solarcost/web
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install solar-assistant-costs-web
-sudo "$(command -v sa-costs-web)" init
+pip install solarcost-web
+sudo "$(command -v sa_web)" init
 ```
 
 ## Desinstalacion
 
 `pip uninstall` solo elimina el paquete instalado dentro del entorno virtual. No borra automaticamente:
 
-- el archivo `costs-web.env`,
+- el archivo `solarcost-web.env`,
 - la base SQLite,
 - el directorio de trabajo,
 - los unit files de `systemd`,
@@ -62,19 +62,19 @@ Si quieres una desinstalacion conservando configuracion:
 
 ```bash
 source .venv/bin/activate
-pip uninstall solar-assistant-costs-web
+pip uninstall solarcost-web
 ```
 
 O con el asistente interactivo:
 
 ```bash
-sa-costs-web uninstall
+sa_web uninstall
 ```
 
 Si quieres tocar un servicio `system`, usa:
 
 ```bash
-sudo "$(command -v sa-costs-web)" uninstall
+sudo "$(command -v sa_web)" uninstall
 ```
 
 Si instalaste desde el repo, tambien puedes usar:
@@ -86,12 +86,12 @@ Si instalaste desde el repo, tambien puedes usar:
 Si quieres una desinstalacion limpia completa:
 
 ```bash
-sudo systemctl stop sa-costs-web.service
-sudo systemctl disable sa-costs-web.service
-sudo rm -f /etc/systemd/system/sa-costs-web.service
+sudo systemctl stop solarcost-web.service
+sudo systemctl disable solarcost-web.service
+sudo rm -f /etc/systemd/system/solarcost-web.service
 sudo systemctl daemon-reload
 
-rm -f /ruta/a/costs-web.env
+rm -f /ruta/a/solarcost-web.env
 rm -f /ruta/a/data/energy_costs.sqlite3
 rm -rf /ruta/al/directorio/de/trabajo
 ```
@@ -107,15 +107,15 @@ rm -rf /ruta/al/directorio/de/trabajo
 Ejemplo:
 
 ```bash
-git clone https://github.com/gteijeiro/solar-assistant-costs-costs-web.git
-cd solar-assistant-costs-costs-web
+git clone https://github.com/gteijeiro/solarcost-web.git
+cd solarcost-web
 ./init.sh
 ```
 
 Para ver logs:
 
 ```bash
-sudo journalctl -u sa-costs-web.service -f
+sudo journalctl -u solarcost-web.service -f
 ```
 
 ## Ejecucion
@@ -125,13 +125,13 @@ Primero asegúrate de tener el bridge levantado.
 ```bash
 export SA_COSTS_BRIDGE_URL="http://127.0.0.1:8765"
 export SA_COSTS_SECRET_KEY="GENERA_AQUI_UN_SECRETO_LARGO_Y_UNICO"
-sa-costs-web
+sa_web
 ```
 
 Tambien puedes usar el subcomando explicito:
 
 ```bash
-sa-costs-web run
+sa_web run
 ```
 
 La web queda por defecto en:

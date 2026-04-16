@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "solar-assistant-costs-web"
-version = "0.3.1"
-description = "Aplicacion web para calcular el costo de la luz usando el bridge de SolarAssistant."
+name = "solarcost-web"
+version = "0.1.0"
+description = "SolarCost web para calcular el costo de la luz usando el bridge de Solar Assistant."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -32,12 +32,13 @@ dependencies = [
 ]
 
 [project.scripts]
+sa_web = "sa_costs_web.__main__:main"
 sa-costs-web = "sa_costs_web.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/gteijeiro/solar-assistant-costs-costs-web"
-Repository = "https://github.com/gteijeiro/solar-assistant-costs-costs-web"
-Issues = "https://github.com/gteijeiro/solar-assistant-costs-costs-web/issues"
+Homepage = "https://github.com/gteijeiro/solarcost-web"
+Repository = "https://github.com/gteijeiro/solarcost-web"
+Issues = "https://github.com/gteijeiro/solarcost-web/issues"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

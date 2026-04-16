@@ -12,4 +12,4 @@ fi
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install .
 
-exec "$VENV_DIR/bin/sa-costs-web" init "$@"
+exec "$VENV_DIR/bin/sa_web" init "$@"

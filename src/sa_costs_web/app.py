@@ -389,7 +389,7 @@ def create_app(config: WebConfig) -> Flask:
             mimetype="application/json",
         )
         response.headers["Content-Disposition"] = (
-            f'attachment; filename="sa-costs-web-config-{date.today().isoformat()}.json"'
+            f'attachment; filename="solarcost-web-config-{date.today().isoformat()}.json"'
         )
         return response
 

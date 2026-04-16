@@ -229,7 +229,7 @@ class CostsRepository:
     def export_configuration(self) -> dict[str, Any]:
         periods = self.list_billing_periods(ascending=True)
         return {
-            "format": "sa-costs-web-config",
+            "format": "solarcost-web-config",
             "schema_version": 2,
             "exported_at": utc_now(),
             "data": {
@@ -285,8 +285,8 @@ class CostsRepository:
     def prepare_configuration_import(self, payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("El archivo debe contener un objeto JSON valido.")
-        if str(payload.get("format") or "") != "sa-costs-web-config":
-            raise ValueError("El archivo no corresponde a una exportacion valida de Energy Costs.")
+        if str(payload.get("format") or "") != "solarcost-web-config":
+            raise ValueError("El archivo no corresponde a una exportacion valida de SolarCost Web.")
         schema_version = int(payload.get("schema_version") or 0)
         if schema_version not in {1, 2}:
             raise ValueError("La version del archivo no es compatible con esta aplicacion.")
@@ -299,7 +299,7 @@ class CostsRepository:
         periods = self._normalize_import_periods(data.get("periods"))
 
         return {
-            "format": "sa-costs-web-config",
+            "format": "solarcost-web-config",
             "schema_version": schema_version,
             "exported_at": str(payload.get("exported_at") or ""),
             "data": {

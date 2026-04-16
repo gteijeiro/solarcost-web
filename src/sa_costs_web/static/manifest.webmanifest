@@ -1,6 +1,6 @@
 {
-  "name": "Energy Costs",
-  "short_name": "Energy Costs",
+  "name": "SolarCost",
+  "short_name": "SolarCost",
   "description": "Calculadora web de costo electrico con consumo, tarifas y comparativos.",
   "start_url": "/",
   "scope": "/",

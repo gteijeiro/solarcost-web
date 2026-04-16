@@ -7,8 +7,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Energy Costs">
-    <title>{% block title %}Energy Costs{% endblock %}</title>
+    <meta name="apple-mobile-web-app-title" content="SolarCost">
+    <title>{% block title %}SolarCost{% endblock %}</title>
     <link rel="manifest" href="{{ url_for('manifest_file') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icon.svg') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.svg') }}">
@@ -28,7 +28,7 @@
               </span>
             </button>
             <div class="sidebar-brand">
-              <p class="eyebrow">Energy Costs</p>
+              <p class="eyebrow">SolarCost</p>
               <h1 class="sidebar-title">Calculadora de costo electrico</h1>
             </div>
           </div>
@@ -89,7 +89,7 @@
       <div class="page-shell">
         <header class="topbar{% if current_user %} topbar-authenticated{% endif %}">
           <div class="topbar-brand">
-            <p class="eyebrow">Energy Costs</p>
+            <p class="eyebrow">SolarCost</p>
             <h1 class="topbar-title">Calculadora de costo electrico</h1>
           </div>
           {% if current_user %}
