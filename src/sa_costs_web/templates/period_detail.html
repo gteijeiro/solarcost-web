@@ -5,44 +5,44 @@
     <article class="hero-card hero-card-compact">
       <div class="hero-topline">
         <div>
-          <p class="eyebrow">Periodo facturado</p>
+          <p class="eyebrow">{{ t('Periodo facturado') }}</p>
           <h2>{{ period.name }}</h2>
         </div>
         {% if bridge_error %}
-          <span class="badge badge-danger">Sin bridge</span>
+          <span class="badge badge-danger">{{ t('Sin bridge') }}</span>
         {% elif summary %}
           <span class="badge {{ 'badge-warning' if summary.has_inverter_issue else 'badge-success' }}">
-            {{ 'Revisar medicion' if summary.has_inverter_issue else 'Medicion OK' }}
+            {{ t('Revisar medicion') if summary.has_inverter_issue else t('Medicion OK') }}
           </span>
         {% else %}
-          <span class="badge badge-warning">Sin calculo</span>
+          <span class="badge badge-warning">{{ t('Sin calculo') }}</span>
         {% endif %}
       </div>
 
       <div class="overview-chip-row">
         <span class="overview-chip">
-          <strong>Inicio</strong>
+          <strong>{{ t('Inicio') }}</strong>
           {{ period.starts_on }}
         </span>
         <span class="overview-chip">
-          <strong>Rango</strong>
+          <strong>{{ t('Rango') }}</strong>
           {% if summary %}
-            {{ summary.period.effective_start }} a {{ summary.period.effective_end }}
+            {{ summary.period.effective_start }} - {{ summary.period.effective_end }}
           {% else %}
-            Pendiente de calculo
+            {{ t('Pendiente de calculo') }}
           {% endif %}
         </span>
         <span class="overview-chip">
-          <strong>Fuente</strong>
+          <strong>{{ t('Fuente') }}</strong>
           {% if summary %}
-            {{ 'Compania' if summary.consumption_source == 'utility' else 'Red' }}
+            {{ summary.selected_variant.label }}
           {% else %}
-            Sin definir
+            {{ t('Sin definir') }}
           {% endif %}
         </span>
         {% if period.notes %}
           <span class="overview-chip overview-chip-note">
-            <strong>Notas</strong>
+            <strong>{{ t('Notas') }}</strong>
             {{ period.notes }}
           </span>
         {% endif %}
@@ -52,11 +52,11 @@
     <article class="status-card status-card-compact">
       <div class="status-card-topline">
         <div>
-          <p class="eyebrow">Resumen</p>
-          <h3>Consumo calculado</h3>
+          <p class="eyebrow">{{ t('Resumen') }}</p>
+          <h3>{{ t('Consumo calculado') }}</h3>
         </div>
         {% if summary %}
-          <span class="pill">{{ 'Abierto' if summary.period.is_open else 'Cerrado' }}</span>
+          <span class="pill">{{ t('Abierto') if summary.period.is_open else t('Cerrado') }}</span>
         {% endif %}
       </div>
       {% if bridge_error %}
@@ -64,164 +64,164 @@
       {% elif summary %}
         <div class="overview-chip-row overview-chip-row-compact">
           <span class="overview-chip overview-chip-accent">
-            <strong>Facturable</strong>
+            <strong>{{ t('Facturable') }}</strong>
             {{ summary.billing_consumption_kwh | kwh }} kWh
           </span>
           <span class="overview-chip">
-            <strong>Servicio</strong>
+            <strong>{{ t('Servicio') }}</strong>
             {{ summary.selected_variant.service_total | money }}
           </span>
           <span class="overview-chip">
-            <strong>Factura</strong>
+            <strong>{{ t('Factura') }}</strong>
             {{ summary.selected_variant.total | money }}
           </span>
           <span class="overview-chip">
-            <strong>Solar</strong>
+            <strong>{{ t('Solar') }}</strong>
             {{ summary.solar_pv_kwh | kwh }} kWh
           </span>
         </div>
         <div class="status-inline-list">
-          <span><strong>Red:</strong> {{ summary.inverter_consumption_kwh | kwh }} kWh</span>
-          <span><strong>Carga total:</strong> {{ summary.inverter_load_kwh | kwh }} kWh</span>
-          <span><strong>Medicion:</strong> {{ summary.inverter_issue_summary }}</span>
+          <span><strong>{{ t('Red') }}:</strong> {{ summary.inverter_consumption_kwh | kwh }} kWh</span>
+          <span><strong>{{ t('Carga total') }}:</strong> {{ summary.inverter_load_kwh | kwh }} kWh</span>
+          <span><strong>{{ t('Medicion') }}:</strong> {{ summary.inverter_issue_summary }}</span>
         </div>
       {% else %}
-        <div class="status-note">Aun no hay datos suficientes para este periodo.</div>
+        <div class="status-note">{{ t('Aun no hay datos suficientes para este periodo.') }}</div>
       {% endif %}
     </article>
   </section>
 
-    {% if summary %}
-      <section class="summary-strip">
-        <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
-          <span class="metric-label">Total factura</span>
-          <strong>{{ summary.selected_variant.total | money }}</strong>
-          <span>{{ summary.daily_points | length }} registros diarios</span>
-          {% if summary.alternate_variant %}
-            <span class="metric-subvalue">Con {{ summary.alternate_variant.label | lower }}: {{ summary.alternate_variant.total | money }}</span>
+  {% if summary %}
+    <section class="summary-strip">
+      <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
+        <span class="metric-label">{{ t('Total factura') }}</span>
+        <strong>{{ summary.selected_variant.total | money }}</strong>
+        <span>{{ summary.daily_points | length }} {{ t('registros diarios') }}</span>
+        {% if summary.alternate_variant %}
+          <span class="metric-subvalue">{{ t('Con {label}: {value}', label=(summary.alternate_variant.label | lower), value=money_text(summary.alternate_variant.total)) }}</span>
+        {% endif %}
+      </article>
+      <article class="metric-card metric-card-usage">
+        <span class="metric-label">{{ t('Red') }}</span>
+        <strong>{{ summary.inverter_consumption_kwh | kwh }} kWh</strong>
+        <span>{{ t('Consumo de red medido por SolarAssistant') }}</span>
+      </article>
+      <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
+        <span class="metric-label">{{ t('Energia electrica') }}</span>
+        <strong>{{ summary.selected_variant.energy_cost | money }}</strong>
+        <span>{{ t('Tarifa {scope} con {label}', scope=summary.config_source.bands_scope, label=(summary.selected_variant.label | lower)) }}</span>
+        {% if summary.alternate_variant %}
+          <span class="metric-subvalue">{{ t('Con {label}: {value}', label=(summary.alternate_variant.label | lower), value=money_text(summary.alternate_variant.energy_cost)) }}</span>
+        {% endif %}
+      </article>
+      <article class="metric-card metric-card-company">
+        <span class="metric-label">{{ t('Compania') }}</span>
+        <strong>{% if summary.utility_consumption_kwh is not none %}{{ summary.utility_consumption_kwh | kwh }} kWh{% else %}{{ t('Sin dato') }}{% endif %}</strong>
+        <span>{% if summary.utility_consumption_kwh is not none %}{{ t('Lectura cargada manualmente') }}{% else %}{{ t('Todavia no cargaste lectura') }}{% endif %}</span>
+      </article>
+      <article class="metric-card metric-card-neutral">
+        <span class="metric-label">{{ t('Diferencia') }}</span>
+        <strong>
+          {% if summary.consumption_difference_kwh is not none %}
+            {{ summary.consumption_difference_kwh | kwh }} kWh
+          {% else %}
+            {{ t('Sin dato') }}
           {% endif %}
-        </article>
-        <article class="metric-card metric-card-usage">
-          <span class="metric-label">Red</span>
-          <strong>{{ summary.inverter_consumption_kwh | kwh }} kWh</strong>
-          <span>Consumo de red medido por SolarAssistant</span>
-        </article>
-        <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
-          <span class="metric-label">Energia electrica</span>
-          <strong>{{ summary.selected_variant.energy_cost | money }}</strong>
-          <span>Tarifa {{ summary.config_source.bands_scope }} con {{ summary.selected_variant.label | lower }}</span>
-          {% if summary.alternate_variant %}
-            <span class="metric-subvalue">Con {{ summary.alternate_variant.label | lower }}: {{ summary.alternate_variant.energy_cost | money }}</span>
+        </strong>
+        <span>
+          {% if summary.consumption_difference_percent is not none %}
+            {{ summary.consumption_difference_percent | percent }}
+          {% else %}
+            {{ t('Carga una lectura para comparar') }}
           {% endif %}
-        </article>
-        <article class="metric-card metric-card-company">
-          <span class="metric-label">Compania</span>
-          <strong>{% if summary.utility_consumption_kwh is not none %}{{ summary.utility_consumption_kwh | kwh }} kWh{% else %}Sin dato{% endif %}</strong>
-          <span>{% if summary.utility_consumption_kwh is not none %}Lectura cargada manualmente{% else %}Todavia no cargaste lectura{% endif %}</span>
-        </article>
-        <article class="metric-card metric-card-neutral">
-          <span class="metric-label">Diferencia</span>
-          <strong>
-            {% if summary.consumption_difference_kwh is not none %}
-              {{ summary.consumption_difference_kwh | kwh }} kWh
-            {% else %}
-              Sin dato
-            {% endif %}
-          </strong>
-          <span>
-            {% if summary.consumption_difference_percent is not none %}
-              {{ summary.consumption_difference_percent | percent }}
-            {% else %}
-              Carga una lectura para comparar
-            {% endif %}
-          </span>
-        </article>
-        <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
-          <span class="metric-label">Total servicio energia</span>
-          <strong>{{ summary.selected_variant.service_total | money }}</strong>
-          <span>Energia + conceptos de servicio</span>
-          {% if summary.alternate_variant %}
-            <span class="metric-subvalue">Con {{ summary.alternate_variant.label | lower }}: {{ summary.alternate_variant.service_total | money }}</span>
-          {% endif %}
-        </article>
-        <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
-          <span class="metric-label">IVA y otros conceptos</span>
-          <strong>{{ summary.selected_variant.other_concepts_total | money }}</strong>
-          <span>Conceptos fuera del servicio</span>
-          {% if summary.alternate_variant %}
-            <span class="metric-subvalue">Con {{ summary.alternate_variant.label | lower }}: {{ summary.alternate_variant.other_concepts_total | money }}</span>
-          {% endif %}
-        </article>
-        <article class="metric-card metric-card-load">
-          <span class="metric-label">Carga total del inversor</span>
-          <strong>{{ summary.inverter_load_kwh | kwh }} kWh</strong>
-          <span>Energia total consumida segun el inversor durante este periodo</span>
-        </article>
-        <article class="metric-card metric-card-solar-generation">
-          <span class="metric-label">Generacion solar</span>
-          <strong>{{ summary.solar_pv_kwh | kwh }} kWh</strong>
-          <span>Energia generada por los paneles en este periodo</span>
-        </article>
-        <article class="metric-card metric-card-warning">
-          <span class="metric-label">Integridad inversor</span>
-          <strong>{{ 'Revisar' if summary.has_inverter_issue else 'OK' }}</strong>
-          <span>{{ summary.inverter_issue_summary }}</span>
-        </article>
-        <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
-          <span class="metric-label">Usado para calcular</span>
-          <strong>{{ summary.billing_consumption_kwh | kwh }} kWh</strong>
-          <span>{% if summary.consumption_source == 'utility' %}Tomado de la compania{% else %}Tomado de la red del inversor{% endif %}</span>
-          {% if can_manage %}
-            <div class="source-toggle">
+        </span>
+      </article>
+      <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
+        <span class="metric-label">{{ t('Total servicio energia') }}</span>
+        <strong>{{ summary.selected_variant.service_total | money }}</strong>
+        <span>{{ t('Energia + conceptos de servicio') }}</span>
+        {% if summary.alternate_variant %}
+          <span class="metric-subvalue">{{ t('Con {label}: {value}', label=(summary.alternate_variant.label | lower), value=money_text(summary.alternate_variant.service_total)) }}</span>
+        {% endif %}
+      </article>
+      <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
+        <span class="metric-label">{{ t('IVA y otros conceptos') }}</span>
+        <strong>{{ summary.selected_variant.other_concepts_total | money }}</strong>
+        <span>{{ t('Conceptos fuera del servicio') }}</span>
+        {% if summary.alternate_variant %}
+          <span class="metric-subvalue">{{ t('Con {label}: {value}', label=(summary.alternate_variant.label | lower), value=money_text(summary.alternate_variant.other_concepts_total)) }}</span>
+        {% endif %}
+      </article>
+      <article class="metric-card metric-card-load">
+        <span class="metric-label">{{ t('Carga total del inversor') }}</span>
+        <strong>{{ summary.inverter_load_kwh | kwh }} kWh</strong>
+        <span>{{ t('Energia total consumida segun el inversor durante este periodo') }}</span>
+      </article>
+      <article class="metric-card metric-card-solar-generation">
+        <span class="metric-label">{{ t('Generacion solar') }}</span>
+        <strong>{{ summary.solar_pv_kwh | kwh }} kWh</strong>
+        <span>{{ t('Energia generada por los paneles en este periodo') }}</span>
+      </article>
+      <article class="metric-card metric-card-warning">
+        <span class="metric-label">{{ t('Integridad inversor') }}</span>
+        <strong>{{ t('Revisar') if summary.has_inverter_issue else t('OK') }}</strong>
+        <span>{{ summary.inverter_issue_summary }}</span>
+      </article>
+      <article class="metric-card metric-card-source metric-card-source-{{ summary.consumption_source }}">
+        <span class="metric-label">{{ t('Usado para calcular') }}</span>
+        <strong>{{ summary.billing_consumption_kwh | kwh }} kWh</strong>
+        <span>{{ t('Tomado de la compania') if summary.consumption_source == 'utility' else t('Tomado de la red del inversor') }}</span>
+        {% if can_manage %}
+          <div class="source-toggle">
+            <form method="post" action="{{ url_for('save_period_billing_source', period_id=period.id) }}">
+              <input type="hidden" name="billing_source" value="inverter">
+              <button type="submit" class="source-toggle-button {{ 'is-active' if summary.consumption_source == 'inverter' else '' }}">{{ t('Red') }}</button>
+            </form>
+            {% if summary.utility_consumption_kwh is not none %}
               <form method="post" action="{{ url_for('save_period_billing_source', period_id=period.id) }}">
-                <input type="hidden" name="billing_source" value="inverter">
-                <button type="submit" class="source-toggle-button {{ 'is-active' if summary.consumption_source == 'inverter' else '' }}">Red</button>
+                <input type="hidden" name="billing_source" value="utility">
+                <button type="submit" class="source-toggle-button {{ 'is-active' if summary.consumption_source == 'utility' else '' }}">{{ t('Compania') }}</button>
               </form>
-              {% if summary.utility_consumption_kwh is not none %}
-                <form method="post" action="{{ url_for('save_period_billing_source', period_id=period.id) }}">
-                  <input type="hidden" name="billing_source" value="utility">
-                  <button type="submit" class="source-toggle-button {{ 'is-active' if summary.consumption_source == 'utility' else '' }}">Compania</button>
-                </form>
-              {% else %}
-                <span class="source-toggle-button is-disabled">Compania</span>
-              {% endif %}
-            </div>
-          {% endif %}
-        </article>
-      </section>
+            {% else %}
+              <span class="source-toggle-button is-disabled">{{ t('Compania') }}</span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </article>
+    </section>
 
     <section class="solar-insight-grid">
       <article class="metric-card metric-card-theoretical">
-        <span class="metric-label">Factura teorica sin solar</span>
+        <span class="metric-label">{{ t('Factura teorica sin solar') }}</span>
         <strong>{{ summary.load_variant.total | money }}</strong>
-        <span>Calculada con la carga total del inversor: {{ summary.inverter_load_kwh | kwh }} kWh</span>
+        <span>{{ t('Calculada con la carga total del inversor: {value} kWh', value=kwh_text(summary.inverter_load_kwh)) }}</span>
       </article>
       <article class="metric-card metric-card-savings">
-        <span class="metric-label">Ahorro solar estimado</span>
+        <span class="metric-label">{{ t('Ahorro solar estimado') }}</span>
         <strong>{{ summary.solar_savings_total | money }}</strong>
-        <span>Diferencia entre la factura actual y la factura teorica sin aporte solar.</span>
-        <span class="metric-subvalue">Factura actual: {{ summary.selected_variant.total | money }} | Sin solar: {{ summary.load_variant.total | money }}</span>
+        <span>{{ t('Diferencia entre la factura actual y la factura teorica sin aporte solar.') }}</span>
+        <span class="metric-subvalue">{{ t('Factura actual: {current} | Sin solar: {without_solar}', current=money_text(summary.selected_variant.total), without_solar=money_text(summary.load_variant.total)) }}</span>
       </article>
     </section>
 
     <section class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Integridad</p>
-          <h2>Mediciones del inversor</h2>
+          <p class="eyebrow">{{ t('Integridad') }}</p>
+          <h2>{{ t('Mediciones del inversor') }}</h2>
         </div>
       </div>
-      <p><strong>Estado:</strong> {{ 'Revisar' if summary.has_inverter_issue else 'OK' }}</p>
-      <p><strong>Cobertura:</strong> {{ summary.coverage_observed_day_count }}/{{ summary.coverage_expected_day_count }} dias con medicion.</p>
+      <p><strong>{{ t('Estado:') }}</strong> {{ t('Revisar') if summary.has_inverter_issue else t('OK') }}</p>
+      <p><strong>{{ t('Cobertura:') }}</strong> {{ summary.coverage_observed_day_count }}/{{ summary.coverage_expected_day_count }} {{ t('dias con medicion.') }}</p>
       {% if summary.has_missing_days %}
-        <p><strong>Faltantes detectados:</strong> {{ summary.missing_day_count }} dias sin medicion.</p>
+        <p><strong>{{ t('Faltantes detectados:') }}</strong> {{ summary.missing_day_count }} {{ t('dias sin medicion.') }}</p>
         <p>
-          <strong>Fechas:</strong>
+          <strong>{{ t('Fechas:') }}</strong>
           {{ summary.missing_dates_preview | join(', ') }}
           {% if summary.missing_day_count > summary.missing_dates_preview | length %}...{% endif %}
         </p>
       {% else %}
-        <p>No se detectaron dias faltantes automaticamente. Un valor diario en <code>0</code> no se considera error.</p>
+        <p>{{ t('No se detectaron dias faltantes automaticamente. Un valor diario en 0 no se considera error.') }}</p>
       {% endif %}
     </section>
 
@@ -229,29 +229,29 @@
       <section class="panel">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Comparacion</p>
-            <h2>Red vs compania</h2>
+            <p class="eyebrow">{{ t('Comparacion') }}</p>
+            <h2>{{ t('Red vs compania') }}</h2>
           </div>
         </div>
         <div class="comparison-stack">
           <div class="comparison-row no-border">
             <div class="comparison-meta">
-              <strong>Consumo mensual</strong>
+              <strong>{{ t('Consumo mensual') }}</strong>
               <span class="muted">
                 {% if period_comparison.source == 'utility' %}
-                  El calculo usa la lectura de la compania.
+                  {{ t('El calculo usa la lectura de la compania.') }}
                 {% else %}
-                  El calculo usa la red medida por el inversor.
+                  {{ t('El calculo usa la red medida por el inversor.') }}
                 {% endif %}
               </span>
             </div>
             <div class="comparison-bars">
               <div class="bar-line">
-                <div class="bar-label"><span>Red</span><strong>{{ period_comparison.inverter_kwh | kwh }} kWh</strong></div>
+                <div class="bar-label"><span>{{ t('Red') }}</span><strong>{{ period_comparison.inverter_kwh | kwh }} kWh</strong></div>
                 <div class="bar-track"><div class="bar-fill inverter-bar" style="width: {{ period_comparison.inverter_pct }}%"></div></div>
               </div>
               <div class="bar-line">
-                <div class="bar-label"><span>Compania</span><strong>{% if period_comparison.utility_kwh is not none %}{{ period_comparison.utility_kwh | kwh }} kWh{% else %}Sin dato{% endif %}</strong></div>
+                <div class="bar-label"><span>{{ t('Compania') }}</span><strong>{% if period_comparison.utility_kwh is not none %}{{ period_comparison.utility_kwh | kwh }} kWh{% else %}{{ t('Sin dato') }}{% endif %}</strong></div>
                 <div class="bar-track">
                   {% if period_comparison.utility_kwh is not none %}
                     <div class="bar-fill utility-bar" style="width: {{ period_comparison.utility_pct }}%"></div>
@@ -262,13 +262,13 @@
               </div>
             </div>
             <div class="comparison-meta">
-              <span class="muted">Usado para calcular: <strong>{{ period_comparison.billing_kwh | kwh }} kWh</strong></span>
+              <span class="muted">{{ t('Usado para calcular') }}: <strong>{{ period_comparison.billing_kwh | kwh }} kWh</strong></span>
               <span class="{% if period_comparison.difference_kwh is none %}muted{% elif period_comparison.difference_kwh > 0 %}delta-positive{% elif period_comparison.difference_kwh < 0 %}delta-negative{% else %}delta-neutral{% endif %}">
                 {% if period_comparison.difference_kwh is not none %}
-                  Diferencia: {{ period_comparison.difference_kwh | kwh }} kWh
+                  {{ t('Diferencia: {value} kWh', value=kwh_text(period_comparison.difference_kwh)) }}
                   {% if period_comparison.difference_percent is not none %}({{ period_comparison.difference_percent | percent }}){% endif %}
                 {% else %}
-                  Carga la lectura de la compania para comparar.
+                  {{ t('Carga la lectura de la compania para comparar.') }}
                 {% endif %}
               </span>
             </div>
@@ -281,137 +281,92 @@
       <article class="panel">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Desglose</p>
-            <h2>Franjas aplicadas</h2>
+            <p class="eyebrow">{{ t('Desglose') }}</p>
+            <h2>{{ t('Franjas aplicadas') }}</h2>
           </div>
         </div>
         <div class="table-shell">
           <table class="responsive-detail-table">
             <thead>
               <tr>
-                <th>Franja</th>
-                <th>Usado</th>
-                <th>Precio</th>
-                <th>Subtotal</th>
+                <th>{{ t('Franja') }}</th>
+                <th>{{ t('Usado') }}</th>
+                <th>{{ t('Precio') }}</th>
+                <th>{{ t('Subtotal') }}</th>
               </tr>
             </thead>
             <tbody>
               {% for item in summary.energy_breakdown %}
                 <tr>
-                  <td data-label="Franja">{{ item.label }}</td>
-                  <td data-label="Usado">{{ item.used_kwh | kwh }} kWh</td>
-                  <td data-label="Precio">{{ item.price_per_kwh | money }}</td>
-                  <td data-label="Subtotal">{{ item.subtotal | money }}</td>
+                  <td data-label="{{ t('Franja') }}">{{ item.label }}</td>
+                  <td data-label="{{ t('Usado') }}">{{ item.used_kwh | kwh }} kWh</td>
+                  <td data-label="{{ t('Precio') }}">{{ item.price_per_kwh | money }}</td>
+                  <td data-label="{{ t('Subtotal') }}">{{ item.subtotal | money }}</td>
                 </tr>
               {% else %}
-                <tr><td colspan="4" data-full-row="true">No hay franjas para calcular.</td></tr>
+                <tr><td colspan="4" data-full-row="true">{{ t('No hay franjas para calcular.') }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
       </article>
 
-      <article class="panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Desglose</p>
-            <h2>Servicio de energia</h2>
+      {% for section in summary.section_breakdowns %}
+        <article class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">{{ t('Desglose') }}</p>
+              <h2>{{ section.display_name or section_label(section.code, section.name) }}</h2>
+            </div>
+            {% if not section.enabled %}
+              <span class="badge badge-warning">{{ t('Deshabilitada') }}</span>
+            {% endif %}
           </div>
-        </div>
-        <div class="table-shell">
-          <table class="responsive-detail-table">
-            <thead>
-              <tr>
-                <th>Concepto</th>
-                <th>Tipo</th>
-                <th>Configuracion</th>
-                <th>Resultado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in summary.service_breakdown %}
+          <div class="table-shell">
+            <table class="responsive-detail-table">
+              <thead>
                 <tr>
-                  <td data-label="Concepto">
-                    {{ item.name }}
-                    {% if item.alias %}
-                      <small>{{ item.alias }}</small>
-                    {% endif %}
-                  </td>
-                  <td data-label="Tipo">
-                    {% if item.kind == 'energy' %}Tarifa{% elif item.kind == 'fixed' %}Fijo{% else %}Formula{% endif %}
-                  </td>
-                  <td data-label="Configuracion">
-                    {% if item.kind == 'fixed' %}
-                      {{ item.configured_value | money }}
-                    {% else %}
-                      {{ item.configured_value }}
-                    {% endif %}
-                  </td>
-                  <td data-label="Resultado">{{ item.amount | money }}</td>
+                  <th>{{ t('Concepto') }}</th>
+                  <th>{{ t('Tipo') }}</th>
+                  <th>{{ t('Configuracion') }}</th>
+                  <th>{{ t('Resultado') }}</th>
                 </tr>
-              {% else %}
-                <tr><td colspan="4" data-full-row="true">Sin conceptos de servicio.</td></tr>
-              {% endfor %}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" data-label="Resumen" data-full-row="true"><strong>Total servicio de energia</strong></td>
-                <td data-label="Total"><strong>{{ summary.service_total | money }}</strong></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Desglose</p>
-            <h2>IVA y otros conceptos</h2>
+              </thead>
+              <tbody>
+                {% for item in section["items"] %}
+                  <tr>
+                    <td data-label="{{ t('Concepto') }}">
+                      {{ item.name }}
+                      {% if item.alias %}
+                        <small>{{ item.alias }}</small>
+                      {% endif %}
+                    </td>
+                    <td data-label="{{ t('Tipo') }}">
+                      {% if item.kind == 'energy' %}{{ t('Tarifa') }}{% elif item.kind == 'fixed' %}{{ t('Fijo') }}{% else %}{{ t('Formula') }}{% endif %}
+                    </td>
+                    <td data-label="{{ t('Configuracion') }}">
+                      {% if item.kind == 'fixed' %}
+                        {{ item.configured_value | money }}
+                      {% else %}
+                        {{ item.configured_value }}
+                      {% endif %}
+                    </td>
+                    <td data-label="{{ t('Resultado') }}">{{ item.amount | money }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="4" data-full-row="true">{{ t('No hay conceptos en esta seccion.') }}</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" data-label="{{ t('Resumen') }}" data-full-row="true"><strong>{{ t('Total de la seccion') }}: {{ section.display_name or section_label(section.code, section.name) }}</strong></td>
+                  <td data-label="{{ t('Total') }}"><strong>{{ section.total | money }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
-        </div>
-        <div class="table-shell">
-          <table class="responsive-detail-table">
-            <thead>
-              <tr>
-                <th>Concepto</th>
-                <th>Tipo</th>
-                <th>Configuracion</th>
-                <th>Resultado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in summary.other_concepts_breakdown %}
-                <tr>
-                  <td data-label="Concepto">
-                    {{ item.name }}
-                    {% if item.alias %}
-                      <small>{{ item.alias }}</small>
-                    {% endif %}
-                  </td>
-                  <td data-label="Tipo">{% if item.kind == 'fixed' %}Fijo{% else %}Formula{% endif %}</td>
-                  <td data-label="Configuracion">
-                    {% if item.kind == 'fixed' %}
-                      {{ item.configured_value | money }}
-                    {% else %}
-                      {{ item.configured_value }}
-                    {% endif %}
-                  </td>
-                  <td data-label="Resultado">{{ item.amount | money }}</td>
-                </tr>
-              {% else %}
-                <tr><td colspan="4" data-full-row="true">Sin conceptos en IVA y otros.</td></tr>
-              {% endfor %}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" data-label="Resumen" data-full-row="true"><strong>Total IVA y otros conceptos</strong></td>
-                <td data-label="Total"><strong>{{ summary.other_concepts_total | money }}</strong></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </article>
+        </article>
+      {% endfor %}
     </section>
   {% endif %}
 
@@ -419,32 +374,32 @@
     <details class="collapse-panel">
       <summary class="collapse-summary">
         <span>
-          <small class="eyebrow">{{ 'Edicion' if can_manage else 'Datos' }}</small>
-          <strong>Periodo facturado</strong>
+          <small class="eyebrow">{{ t('Edicion') if can_manage else t('Datos') }}</small>
+          <strong>{{ t('Periodo facturado') }}</strong>
         </span>
-        <span class="ghost-button collapse-trigger">{{ 'Editar' if can_manage else 'Ver' }}</span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') if can_manage else t('Ver') }}</span>
       </summary>
       <div class="collapse-body">
         {% if can_manage %}
           <form method="post" action="{{ url_for('save_period') }}" class="inline-form-grid">
             <input type="hidden" name="period_id" value="{{ period.id }}">
-            <label>Nombre<input type="text" name="name" value="{{ period.name }}" required></label>
-            <label>Inicio<input type="date" name="starts_on" value="{{ period.starts_on }}" required></label>
-            <label>Medido por la compania (kWh)<input type="number" step="0.001" name="utility_measured_kwh" value="{{ '' if period.utility_measured_kwh is none else period.utility_measured_kwh }}"></label>
+            <label>{{ t('Nombre') }}<input type="text" name="name" value="{{ period.name }}" required></label>
+            <label>{{ t('Inicio') }}<input type="date" name="starts_on" value="{{ period.starts_on }}" required></label>
+            <label>{{ t('Medido por la compania (kWh)') }}<input type="number" step="0.001" name="utility_measured_kwh" value="{{ '' if period.utility_measured_kwh is none else period.utility_measured_kwh }}"></label>
             <label class="checkbox-label">
               <input type="checkbox" name="has_inverter_data_issue" {% if period.has_inverter_data_issue %}checked{% endif %}>
-              Marcar error de medicion del inversor
+              {{ t('Marcar error de medicion del inversor en este periodo') }}
             </label>
-            <label class="wide-field">Notas<input type="text" name="notes" value="{{ period.notes }}"></label>
-            <button type="submit" class="primary-button">Guardar cambios</button>
+            <label class="wide-field">{{ t('Notas') }}<input type="text" name="notes" value="{{ period.notes }}"></label>
+            <button type="submit" class="primary-button">{{ t('Guardar cambios') }}</button>
           </form>
         {% else %}
           <div class="readonly-grid">
-            <div><span class="metric-label">Nombre</span><strong>{{ period.name }}</strong></div>
-            <div><span class="metric-label">Inicio</span><strong>{{ period.starts_on }}</strong></div>
-            <div><span class="metric-label">Medido por la compania</span><strong>{% if period.utility_measured_kwh is not none %}{{ period.utility_measured_kwh | kwh }} kWh{% else %}Sin dato{% endif %}</strong></div>
-            <div><span class="metric-label">Error manual</span><strong>{{ 'Si' if period.has_inverter_data_issue else 'No' }}</strong></div>
-            <div class="wide-readonly"><span class="metric-label">Notas</span><strong>{{ period.notes or 'Sin notas' }}</strong></div>
+            <div><span class="metric-label">{{ t('Nombre') }}</span><strong>{{ period.name }}</strong></div>
+            <div><span class="metric-label">{{ t('Inicio') }}</span><strong>{{ period.starts_on }}</strong></div>
+            <div><span class="metric-label">{{ t('Medido por la compania (kWh)') }}</span><strong>{% if period.utility_measured_kwh is not none %}{{ period.utility_measured_kwh | kwh }} kWh{% else %}{{ t('Sin dato') }}{% endif %}</strong></div>
+            <div><span class="metric-label">{{ t('Error manual') }}</span><strong>{{ t('Si') if period.has_inverter_data_issue else t('No') }}</strong></div>
+            <div class="wide-readonly"><span class="metric-label">{{ t('Notas') }}</span><strong>{{ period.notes or t('Sin notas') }}</strong></div>
           </div>
         {% endif %}
       </div>
@@ -453,70 +408,70 @@
     <details class="collapse-panel">
       <summary class="collapse-summary">
         <span>
-          <small class="eyebrow">Tarifa mensual</small>
-          <strong>Franjas de este periodo</strong>
+          <small class="eyebrow">{{ t('Tarifa mensual') }}</small>
+          <strong>{{ t('Franjas de este periodo') }}</strong>
         </span>
-        <span class="ghost-button collapse-trigger">{{ 'Editar' if can_manage else 'Ver' }}</span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') if can_manage else t('Ver') }}</span>
       </summary>
       <div class="collapse-body">
-        <p class="muted">Configuracion efectiva de tarifas de este periodo.</p>
+        <p class="muted">{{ t('Configuracion efectiva de tarifas de este periodo.') }}</p>
         <div class="table-shell">
           <table class="responsive-detail-table">
             <thead>
               <tr>
-                <th>Etiqueta</th>
-                <th>Desde</th>
-                <th>Hasta</th>
-                <th>Precio por kWh</th>
+                <th>{{ t('Etiqueta') }}</th>
+                <th>{{ t('Desde') }}</th>
+                <th>{{ t('Hasta') }}</th>
+                <th>{{ t('Precio por kWh') }}</th>
               </tr>
             </thead>
             <tbody>
               {% for band in effective_bands %}
                 <tr>
-                  <td data-label="Etiqueta">{{ band.label or 'Franja' }}</td>
-                  <td data-label="Desde">{{ band.from_kwh | kwh }} kWh</td>
-                  <td data-label="Hasta">{% if band.to_kwh is none %}Sin limite{% else %}{{ band.to_kwh | kwh }} kWh{% endif %}</td>
-                  <td data-label="Precio por kWh">{{ band.price_per_kwh | money }}</td>
+                  <td data-label="{{ t('Etiqueta') }}">{{ band.label or t('Franja') }}</td>
+                  <td data-label="{{ t('Desde') }}">{{ band.from_kwh | kwh }} kWh</td>
+                  <td data-label="{{ t('Hasta') }}">{% if band.to_kwh is none %}{{ t('Sin limite') }}{% else %}{{ band.to_kwh | kwh }} kWh{% endif %}</td>
+                  <td data-label="{{ t('Precio por kWh') }}">{{ band.price_per_kwh | money }}</td>
                 </tr>
               {% else %}
-                <tr><td colspan="4" data-full-row="true">No hay franjas configuradas.</td></tr>
+                <tr><td colspan="4" data-full-row="true">{{ t('No hay franjas configuradas.') }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% if can_manage %}
           <div class="subpanel">
-            <p class="muted">Estas franjas quedan guardadas para este mes. Los cambios no afectan a otros periodos.</p>
+            <p class="muted">{{ t('Estas franjas quedan guardadas para este mes. Los cambios no afectan a otros periodos.') }}</p>
             <form method="post" action="{{ url_for('save_period_band', period_id=period.id) }}" class="inline-form-grid">
               <input type="hidden" name="band_id" value="">
-              <label>Orden<input type="number" name="position" value="{{ period_bands|length + 1 }}" min="1"></label>
-              <label>Etiqueta<input type="text" name="label" placeholder="Consumo base"></label>
-              <label>Desde kWh<input type="number" step="0.001" name="from_kwh" value="0" required></label>
-              <label>Hasta kWh<input type="number" step="0.001" name="to_kwh" placeholder="Sin limite"></label>
-              <label>Precio por kWh<input type="number" step="0.0001" name="price_per_kwh" value="0" required></label>
-              <button type="submit" class="primary-button">Agregar franja al periodo</button>
+              <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ period_bands|length + 1 }}" min="1"></label>
+              <label>{{ t('Etiqueta') }}<input type="text" name="label" placeholder="{{ t('Consumo base') }}"></label>
+              <label>{{ t('Desde') }} kWh<input type="number" step="0.001" name="from_kwh" value="0" required></label>
+              <label>{{ t('Hasta') }} kWh<input type="number" step="0.001" name="to_kwh" placeholder="{{ t('Sin limite') }}"></label>
+              <label>{{ t('Precio por kWh') }}<input type="number" step="0.0001" name="price_per_kwh" value="0" required></label>
+              <button type="submit" class="primary-button">{{ t('Agregar franja al periodo') }}</button>
             </form>
             <div class="list-stack compact">
               {% for band in period_bands %}
                 <div class="list-card form-card">
                   <form method="post" action="{{ url_for('save_period_band', period_id=period.id) }}" class="inline-form-grid">
                     <input type="hidden" name="band_id" value="{{ band.id }}">
-                    <label>Orden<input type="number" name="position" value="{{ band.position }}" min="1"></label>
-                    <label>Etiqueta<input type="text" name="label" value="{{ band.label }}"></label>
-                    <label>Desde kWh<input type="number" step="0.001" name="from_kwh" value="{{ band.from_kwh }}" required></label>
-                    <label>Hasta kWh<input type="number" step="0.001" name="to_kwh" value="{{ '' if band.to_kwh is none else band.to_kwh }}"></label>
-                    <label>Precio por kWh<input type="number" step="0.0001" name="price_per_kwh" value="{{ band.price_per_kwh }}" required></label>
-                    <button type="submit" class="ghost-button">Guardar</button>
+                    <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ band.position }}" min="1"></label>
+                    <label>{{ t('Etiqueta') }}<input type="text" name="label" value="{{ band.label }}"></label>
+                    <label>{{ t('Desde') }} kWh<input type="number" step="0.001" name="from_kwh" value="{{ band.from_kwh }}" required></label>
+                    <label>{{ t('Hasta') }} kWh<input type="number" step="0.001" name="to_kwh" value="{{ '' if band.to_kwh is none else band.to_kwh }}"></label>
+                    <label>{{ t('Precio por kWh') }}<input type="number" step="0.0001" name="price_per_kwh" value="{{ band.price_per_kwh }}" required></label>
+                    <button type="submit" class="ghost-button">{{ t('Guardar') }}</button>
                   </form>
                   <form method="post" action="{{ url_for('delete_period_band', period_id=period.id, band_id=band.id) }}">
-                    <button type="submit" class="danger-button">Eliminar</button>
+                    <button type="submit" class="danger-button">{{ t('Eliminar') }}</button>
                   </form>
                 </div>
               {% else %}
                 <div class="subpanel">
-                  <p class="muted">Este periodo todavia no tiene una tarifa propia.</p>
+                  <p class="muted">{{ t('Este periodo todavia no tiene una tarifa propia.') }}</p>
                   <form method="post" action="{{ url_for('seed_period_bands', period_id=period.id) }}">
-                    <button type="submit" class="ghost-button">Copiar ultimo precio o plantilla</button>
+                    <button type="submit" class="ghost-button">{{ t('Copiar ultimo precio o plantilla') }}</button>
                   </form>
                 </div>
               {% endfor %}
@@ -529,56 +484,57 @@
     <details class="collapse-panel">
       <summary class="collapse-summary">
         <span>
-          <small class="eyebrow">Cargo mensual</small>
-          <strong>Cargos fijos del periodo</strong>
+          <small class="eyebrow">{{ t('Cargo mensual') }}</small>
+          <strong>{{ t('Cargos fijos del periodo') }}</strong>
         </span>
-        <span class="ghost-button collapse-trigger">{{ 'Editar' if can_manage else 'Ver' }}</span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') if can_manage else t('Ver') }}</span>
       </summary>
       <div class="collapse-body">
         <div class="table-shell">
           <table class="responsive-detail-table">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Seccion</th>
-                <th>Importe</th>
-                <th>Dashboard</th>
+                <th>{{ t('Nombre') }}</th>
+                <th>{{ t('Seccion') }}</th>
+                <th>{{ t('Importe') }}</th>
+                <th>{{ t('Dashboard') }}</th>
               </tr>
             </thead>
             <tbody>
               {% for rule in effective_fixed %}
                 <tr>
-                  <td data-label="Nombre">{{ rule.name }}</td>
-                  <td data-label="Seccion">{{ 'Servicio de energia' if (rule.section or 'service') == 'service' else 'IVA y otros conceptos' }}</td>
-                  <td data-label="Importe">{{ rule.amount | money }}</td>
-                  <td data-label="Dashboard">{{ 'Si' if rule.show_on_dashboard else 'No' }}</td>
+                  <td data-label="{{ t('Nombre') }}">{{ rule.name }}</td>
+                  <td data-label="{{ t('Seccion') }}">{{ section_label(rule.section, rule.section) }}</td>
+                  <td data-label="{{ t('Importe') }}">{{ rule.amount | money }}</td>
+                  <td data-label="{{ t('Dashboard') }}">{{ t('Si') if rule.show_on_dashboard else t('No') }}</td>
                 </tr>
               {% else %}
-                <tr><td colspan="4" data-full-row="true">No hay cargos fijos configurados.</td></tr>
+                <tr><td colspan="4" data-full-row="true">{{ t('No hay cargos fijos configurados.') }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% if can_manage %}
           <div class="subpanel">
-            <p class="muted">Estos importes fijos quedan guardados para este mes. Los cambios no afectan a otros periodos.</p>
+            <p class="muted">{{ t('Estos importes fijos quedan guardados para este mes. Los cambios no afectan a otros periodos.') }}</p>
             <form method="post" action="{{ url_for('save_period_charge', period_id=period.id) }}" class="inline-form-grid">
               <input type="hidden" name="rule_id" value="">
               <input type="hidden" name="kind" value="fixed">
-              <label>Orden<input type="number" name="position" value="{{ override_fixed|length + 1 }}" min="1"></label>
+              <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ override_fixed|length + 1 }}" min="1"></label>
               <label>
-                Seccion
+                {{ t('Seccion') }}
                 <select name="section">
-                  <option value="service" selected>Servicio de energia</option>
-                  <option value="tax">IVA y otros conceptos</option>
+                  {% for section in charge_sections %}
+                    <option value="{{ section.code }}" {% if section.is_default_service %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+                  {% endfor %}
                 </select>
               </label>
-              <label>Nombre<input type="text" name="name" placeholder="Cargo fijo" required></label>
-              <label>Alias<input type="text" name="alias" placeholder="cargo_fijo"></label>
-              <label>Importe<input type="number" step="0.01" name="amount" value="0" required></label>
-              <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard"> Mostrar en dashboard</label>
-              <label class="checkbox-label"><input type="checkbox" name="enabled" checked> Activo</label>
-              <button type="submit" class="primary-button">Agregar cargo al periodo</button>
+              <label>{{ t('Nombre') }}<input type="text" name="name" placeholder="{{ t('Cargo fijo') }}" required></label>
+              <label>{{ t('Alias') }}<input type="text" name="alias" placeholder="cargo_fijo"></label>
+              <label>{{ t('Importe') }}<input type="number" step="0.01" name="amount" value="0" required></label>
+              <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard"> {{ t('Mostrar en dashboard') }}</label>
+              <label class="checkbox-label"><input type="checkbox" name="enabled" checked> {{ t('Activo') }}</label>
+              <button type="submit" class="primary-button">{{ t('Agregar cargo al periodo') }}</button>
             </form>
             <div class="list-stack compact">
               {% for rule in override_fixed %}
@@ -586,30 +542,31 @@
                   <form method="post" action="{{ url_for('save_period_charge', period_id=period.id) }}" class="inline-form-grid">
                     <input type="hidden" name="rule_id" value="{{ rule.id }}">
                     <input type="hidden" name="kind" value="fixed">
-                    <label>Orden<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
+                    <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
                     <label>
-                      Seccion
+                      {{ t('Seccion') }}
                       <select name="section">
-                        <option value="service" {% if (rule.section or 'service') == 'service' %}selected{% endif %}>Servicio de energia</option>
-                        <option value="tax" {% if rule.section == 'tax' %}selected{% endif %}>IVA y otros conceptos</option>
+                        {% for section in charge_sections %}
+                          <option value="{{ section.code }}" {% if (rule.section or 'service') == section.code %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+                        {% endfor %}
                       </select>
                     </label>
-                    <label>Nombre<input type="text" name="name" value="{{ rule.name }}" required></label>
-                    <label>Alias<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
-                    <label>Importe<input type="number" step="0.01" name="amount" value="{{ rule.amount }}" required></label>
-                    <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard" {% if rule.show_on_dashboard %}checked{% endif %}> Mostrar en dashboard</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> Activo</label>
-                    <button type="submit" class="ghost-button">Guardar</button>
+                    <label>{{ t('Nombre') }}<input type="text" name="name" value="{{ rule.name }}" required></label>
+                    <label>{{ t('Alias') }}<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
+                    <label>{{ t('Importe') }}<input type="number" step="0.01" name="amount" value="{{ rule.amount }}" required></label>
+                    <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard" {% if rule.show_on_dashboard %}checked{% endif %}> {{ t('Mostrar en dashboard') }}</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> {{ t('Activo') }}</label>
+                    <button type="submit" class="ghost-button">{{ t('Guardar') }}</button>
                   </form>
                   <form method="post" action="{{ url_for('delete_period_charge', period_id=period.id, rule_id=rule.id) }}">
-                    <button type="submit" class="danger-button">Eliminar</button>
+                    <button type="submit" class="danger-button">{{ t('Eliminar') }}</button>
                   </form>
                 </div>
               {% else %}
                 <div class="subpanel">
-                  <p class="muted">Este periodo todavia no tiene cargos fijos propios.</p>
+                  <p class="muted">{{ t('Este periodo todavia no tiene cargos fijos propios.') }}</p>
                   <form method="post" action="{{ url_for('seed_period_fixed_charges', period_id=period.id) }}">
-                    <button type="submit" class="ghost-button">Copiar ultimo cargo o plantilla</button>
+                    <button type="submit" class="ghost-button">{{ t('Copiar ultimo cargo o plantilla') }}</button>
                   </form>
                 </div>
               {% endfor %}
@@ -622,32 +579,32 @@
     <details class="collapse-panel">
       <summary class="collapse-summary">
         <span>
-          <small class="eyebrow">Reglas por formula</small>
-          <strong>Conceptos calculados del periodo</strong>
+          <small class="eyebrow">{{ t('Reglas por formula') }}</small>
+          <strong>{{ t('Conceptos calculados del periodo') }}</strong>
         </span>
-        <span class="ghost-button collapse-trigger">{{ 'Editar' if can_manage else 'Ver' }}</span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') if can_manage else t('Ver') }}</span>
       </summary>
       <div class="collapse-body">
         <div class="table-shell">
           <table class="responsive-detail-table">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Seccion</th>
-                <th>Alias</th>
-                <th>Expresion</th>
+                <th>{{ t('Nombre') }}</th>
+                <th>{{ t('Seccion') }}</th>
+                <th>{{ t('Alias') }}</th>
+                <th>{{ t('Expresion') }}</th>
               </tr>
             </thead>
             <tbody>
               {% for rule in effective_taxes %}
                 <tr>
-                  <td data-label="Nombre">{{ rule.name }}</td>
-                  <td data-label="Seccion">{{ 'Servicio de energia' if rule.section == 'service' else 'IVA y otros conceptos' }}</td>
-                  <td data-label="Alias">{{ rule.alias or '-' }}</td>
-                  <td data-label="Expresion">{{ rule.expression }}</td>
+                  <td data-label="{{ t('Nombre') }}">{{ rule.name }}</td>
+                  <td data-label="{{ t('Seccion') }}">{{ section_label(rule.section, rule.section) }}</td>
+                  <td data-label="{{ t('Alias') }}">{{ rule.alias or '-' }}</td>
+                  <td data-label="{{ t('Expresion') }}">{{ rule.expression }}</td>
                 </tr>
               {% else %}
-                <tr><td colspan="4" data-full-row="true">No hay conceptos calculados configurados.</td></tr>
+                <tr><td colspan="4" data-full-row="true">{{ t('No hay conceptos calculados configurados.') }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -657,19 +614,20 @@
             <form method="post" action="{{ url_for('save_period_charge', period_id=period.id) }}" class="inline-form-grid">
               <input type="hidden" name="rule_id" value="">
               <input type="hidden" name="kind" value="tax">
-              <label>Orden<input type="number" name="position" value="{{ override_taxes|length + 1 }}" min="1"></label>
+              <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ override_taxes|length + 1 }}" min="1"></label>
               <label>
-                Seccion
+                {{ t('Seccion') }}
                 <select name="section">
-                  <option value="service">Servicio de energia</option>
-                  <option value="tax" selected>IVA y otros conceptos</option>
+                  {% for section in charge_sections %}
+                    <option value="{{ section.code }}" {% if section.is_default_tax %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+                  {% endfor %}
                 </select>
               </label>
-              <label>Nombre<input type="text" name="name" placeholder="IVA" required></label>
-              <label>Alias<input type="text" name="alias" placeholder="fodep"></label>
-              <label class="wide-field">Expresion<input type="text" name="expression" placeholder="21% de total_factura" required></label>
-              <label class="checkbox-label"><input type="checkbox" name="enabled" checked> Activo</label>
-              <button type="submit" class="primary-button">Guardar override</button>
+              <label>{{ t('Nombre') }}<input type="text" name="name" placeholder="{{ t('IVA') }}" required></label>
+              <label>{{ t('Alias') }}<input type="text" name="alias" placeholder="fodep"></label>
+              <label class="wide-field">{{ t('Expresion') }}<input type="text" name="expression" placeholder="21% de total_factura" required></label>
+              <label class="checkbox-label"><input type="checkbox" name="enabled" checked> {{ t('Activo') }}</label>
+              <button type="submit" class="primary-button">{{ t('Guardar override') }}</button>
             </form>
             <div class="list-stack compact">
               {% for rule in override_taxes %}
@@ -677,26 +635,27 @@
                   <form method="post" action="{{ url_for('save_period_charge', period_id=period.id) }}" class="inline-form-grid">
                     <input type="hidden" name="rule_id" value="{{ rule.id }}">
                     <input type="hidden" name="kind" value="tax">
-                    <label>Orden<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
+                    <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
                     <label>
-                      Seccion
+                      {{ t('Seccion') }}
                       <select name="section">
-                        <option value="service" {% if rule.section == 'service' %}selected{% endif %}>Servicio de energia</option>
-                        <option value="tax" {% if (rule.section or 'tax') == 'tax' %}selected{% endif %}>IVA y otros conceptos</option>
+                        {% for section in charge_sections %}
+                          <option value="{{ section.code }}" {% if (rule.section or 'tax') == section.code %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+                        {% endfor %}
                       </select>
                     </label>
-                    <label>Nombre<input type="text" name="name" value="{{ rule.name }}" required></label>
-                    <label>Alias<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
-                    <label class="wide-field">Expresion<input type="text" name="expression" value="{{ rule.expression }}" required></label>
-                    <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> Activo</label>
-                    <button type="submit" class="ghost-button">Guardar</button>
+                    <label>{{ t('Nombre') }}<input type="text" name="name" value="{{ rule.name }}" required></label>
+                    <label>{{ t('Alias') }}<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
+                    <label class="wide-field">{{ t('Expresion') }}<input type="text" name="expression" value="{{ rule.expression }}" required></label>
+                    <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> {{ t('Activo') }}</label>
+                    <button type="submit" class="ghost-button">{{ t('Guardar') }}</button>
                   </form>
                   <form method="post" action="{{ url_for('delete_period_charge', period_id=period.id, rule_id=rule.id) }}">
-                    <button type="submit" class="danger-button">Eliminar</button>
+                    <button type="submit" class="danger-button">{{ t('Eliminar') }}</button>
                   </form>
                 </div>
               {% else %}
-                <p class="muted">Sin overrides de impuestos. Se usa la configuracion base.</p>
+                <p class="muted">{{ t('Sin overrides de impuestos. Se usa la configuracion base.') }}</p>
               {% endfor %}
             </div>
           </div>
@@ -709,8 +668,8 @@
     <section class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Detalle diario</p>
-          <h2>Costo de energia por dia</h2>
+          <p class="eyebrow">{{ t('Detalle diario') }}</p>
+          <h2>{{ t('Costo de energia por dia') }}</h2>
           <p>{{ summary.daily_cost_note }}</p>
         </div>
       </div>
@@ -718,40 +677,40 @@
         <table class="responsive-detail-table responsive-daily-cost-table">
           <thead>
             <tr>
-              <th>Fecha</th>
-              <th>Medicion</th>
-              <th>Red inversor</th>
-              <th>Usado para calcular</th>
-              <th>Carga total</th>
+              <th>{{ t('Fecha') }}</th>
+              <th>{{ t('Medicion') }}</th>
+              <th>{{ t('Red inversor') }}</th>
+              <th>{{ t('Usado para calcular') }}</th>
+              <th>{{ t('Carga total') }}</th>
               <th>Solar PV</th>
-              <th>Costo energia</th>
-              <th>Acumulado</th>
+              <th>{{ t('Costo energia') }}</th>
+              <th>{{ t('Acumulado') }}</th>
             </tr>
           </thead>
           <tbody>
             {% for item in summary.daily_energy_cost_breakdown %}
               <tr>
-                <td data-label="Fecha">{{ item.date }}</td>
-                <td data-label="Medicion">
+                <td data-label="{{ t('Fecha') }}">{{ item.date }}</td>
+                <td data-label="{{ t('Medicion') }}">
                   {% if item.has_measurement %}
-                    <span class="badge badge-success">Con medicion</span>
+                    <span class="badge badge-success">{{ t('Con medicion') }}</span>
                   {% else %}
-                    <span class="badge badge-warning">Sin medicion</span>
+                    <span class="badge badge-warning">{{ t('Sin medicion') }}</span>
                   {% endif %}
                 </td>
-                <td data-label="Red inversor">{{ item.inverter_grid_kwh | kwh }} kWh</td>
-                <td data-label="Usado para calcular">{{ item.billed_kwh | kwh }} kWh</td>
-                <td data-label="Carga total">{{ item.load_kwh | kwh }} kWh</td>
+                <td data-label="{{ t('Red inversor') }}">{{ item.inverter_grid_kwh | kwh }} kWh</td>
+                <td data-label="{{ t('Usado para calcular') }}">{{ item.billed_kwh | kwh }} kWh</td>
+                <td data-label="{{ t('Carga total') }}">{{ item.load_kwh | kwh }} kWh</td>
                 <td data-label="Solar PV">{{ item.solar_pv_kwh | kwh }} kWh</td>
-                <td data-label="Costo energia">{{ item.energy_cost | money }}</td>
-                <td data-label="Acumulado">{{ item.cumulative_energy_cost | money }}</td>
+                <td data-label="{{ t('Costo energia') }}">{{ item.energy_cost | money }}</td>
+                <td data-label="{{ t('Acumulado') }}">{{ item.cumulative_energy_cost | money }}</td>
               </tr>
             {% endfor %}
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="6" data-label="Resumen" data-full-row="true"><strong>Total costo de energia del periodo</strong></td>
-              <td colspan="2" data-label="Total" data-full-row="true"><strong>{{ summary.energy_cost | money }}</strong></td>
+              <td colspan="6" data-label="{{ t('Resumen') }}" data-full-row="true"><strong>{{ t('Total costo de energia del periodo') }}</strong></td>
+              <td colspan="2" data-label="{{ t('Total') }}" data-full-row="true"><strong>{{ summary.energy_cost | money }}</strong></td>
             </tr>
           </tfoot>
         </table>
@@ -762,9 +721,9 @@
       <section class="panel chart-collection">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Graficos diarios</p>
-            <h2>Evolucion diaria</h2>
-            <p>Visualiza el costo diario y el comportamiento de la red del inversor junto a la generacion solar.</p>
+            <p class="eyebrow">{{ t('Graficos diarios') }}</p>
+            <h2>{{ t('Evolucion diaria') }}</h2>
+            <p>{{ t('Visualiza el costo diario y el comportamiento de la red del inversor junto a la generacion solar.') }}</p>
           </div>
         </div>
         <div class="chart-grid">

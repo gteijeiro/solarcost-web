@@ -66,6 +66,7 @@ class RepositoryMigrationTests(unittest.TestCase):
             self.assertIn("billing_source", period_columns)
             self.assertIn("role", user_columns)
             self.assertIn("enabled", user_columns)
+            self.assertIn("language", user_columns)
             self.assertIn("show_on_dashboard", charge_columns)
 
 
@@ -84,6 +85,7 @@ class CalculatorTests(unittest.TestCase):
                 {"iso": "2026-04-03T00:00:00-03:00", "grid_kwh": 40, "load_kwh": 55, "solar_pv_kwh": 20},
                 {"iso": "2026-04-12T00:00:00-03:00", "grid_kwh": 60, "load_kwh": 65, "solar_pv_kwh": 24},
             ],
+            sections=[],
             tariff_bands=[
                 {
                     "id": 1,
@@ -116,6 +118,62 @@ class CalculatorTests(unittest.TestCase):
         self.assertEqual(summary["daily_energy_cost_breakdown"][-1]["cumulative_energy_cost"], 300.0)
         self.assertTrue(summary["has_missing_days"])
         self.assertTrue(summary["has_inverter_issue"])
+
+    def test_calculate_period_summary_returns_zero_when_default_sections_are_disabled(self) -> None:
+        summary = calculate_period_summary(
+            {
+                "id": 1,
+                "name": "Abril 2026",
+                "effective_start": "2026-04-01",
+                "effective_end": "2026-04-30",
+                "utility_measured_kwh": None,
+                "billing_source": "inverter",
+            },
+            [
+                {"iso": "2026-04-03T00:00:00-03:00", "grid_kwh": 40, "load_kwh": 50, "solar_pv_kwh": 12},
+            ],
+            sections=[
+                {"code": "service", "name": "Servicio de energia", "position": 1, "is_system": True, "enabled": False},
+                {"code": "tax", "name": "IVA y otros conceptos", "position": 2, "is_system": True, "enabled": False},
+            ],
+            tariff_bands=[
+                {
+                    "id": 1,
+                    "scope": "period",
+                    "position": 1,
+                    "from_kwh": 0,
+                    "to_kwh": None,
+                    "price_per_kwh": 2,
+                }
+            ],
+            fixed_charges=[
+                {
+                    "id": 1,
+                    "position": 1,
+                    "kind": "fixed",
+                    "section": "service",
+                    "name": "Cargo fijo",
+                    "amount": 25.0,
+                    "enabled": True,
+                }
+            ],
+            tax_rules=[
+                {
+                    "id": 1,
+                    "position": 1,
+                    "kind": "tax",
+                    "section": "tax",
+                    "name": "IVA",
+                    "expression": "21% de total_factura",
+                    "enabled": True,
+                }
+            ],
+        )
+
+        self.assertEqual(summary["energy_cost"], 0.0)
+        self.assertEqual(summary["service_total"], 0.0)
+        self.assertEqual(summary["other_concepts_total"], 0.0)
+        self.assertEqual(summary["total"], 0.0)
 
 
 class WebAppTests(unittest.TestCase):
@@ -392,6 +450,48 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(redirect_response.status_code, 200)
         self.assertIn("usuario esta deshabilitado", redirect_response.get_data(as_text=True))
 
+    def test_account_language_can_be_changed_per_user(self) -> None:
+        response = self.client.post(
+            "/account/language",
+            data={"language": "en"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Language updated.", html)
+        self.assertIn("Account language", html)
+        self.assertIn("Change password", html)
+
+        with self.app.app_context():
+            user = self.app.extensions["repo"].get_user_by_id(self.user_id)
+        self.assertIsNotNone(user)
+        self.assertEqual(user["language"], "en")
+
+    def test_settings_page_renders_compact_configuration_rows(self) -> None:
+        with self.app.app_context():
+            repo = self.app.extensions["repo"]
+            repo.save_tariff_band(
+                band_id=None,
+                scope="default",
+                billing_period_id=None,
+                position=1,
+                label="Residencial",
+                from_kwh=0.0,
+                to_kwh=120.0,
+                price_per_kwh=88.25,
+            )
+
+        response = self.client.get("/settings")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Plantilla de tarifa por consumo", html)
+        self.assertIn("settings-row-card", html)
+        self.assertIn("settings-edit-form", html)
+        self.assertIn("settings-row-actions", html)
+        self.assertIn("compact-action-button", html)
+
     def test_admin_can_export_full_configuration_snapshot(self) -> None:
         with self.app.app_context():
             repo = self.app.extensions["repo"]
@@ -462,9 +562,14 @@ class WebAppTests(unittest.TestCase):
 
         payload = json.loads(response.get_data(as_text=True))
         self.assertEqual(payload["format"], "solarcost-web-config")
-        self.assertEqual(payload["schema_version"], 2)
+        self.assertEqual(payload["schema_version"], 3)
         self.assertNotIn("users", payload["data"])
         self.assertNotIn("password_hash", response.get_data(as_text=True))
+        self.assertIn("sections", payload["data"])
+        self.assertEqual(
+            [item["code"] for item in payload["data"]["sections"][:2]],
+            ["service", "tax"],
+        )
         self.assertEqual(payload["data"]["defaults"]["tariff_bands"][0]["label"], "Base")
         self.assertEqual(payload["data"]["defaults"]["fixed_charges"][0]["name"], "Cargo fijo")
         self.assertEqual(payload["data"]["periods"][0]["name"], "Factura junio 2026")
@@ -655,6 +760,7 @@ class WebAppTests(unittest.TestCase):
         preview_html = preview_response.get_data(as_text=True)
         self.assertEqual(preview_response.status_code, 200)
         self.assertIn("Selecciona que importar", preview_html)
+        self.assertIn("Secciones de costo", preview_html)
         self.assertIn("Plantilla de tarifa por consumo", preview_html)
         self.assertIn("Factura febrero 2026", preview_html)
         self.assertIn("Factura marzo 2026", preview_html)
@@ -697,6 +803,49 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(period_fixed[0]["alias"], "cargo_fijo_febrero")
         self.assertEqual(period_taxes[0]["alias"], "fondep")
         self.assertNotIn("Factura marzo 2026", [period["name"] for period in periods])
+
+
+class WebLanguageSetupTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.db_path = Path(self.tmp_dir.name) / "setup.sqlite3"
+        self.config = WebConfig(
+            bridge_url="http://bridge.local",
+            bind_host="127.0.0.1",
+            bind_port=8890,
+            db_path=self.db_path,
+            secret_key="test-secret",
+            log_level="INFO",
+            http_timeout=1.0,
+        )
+        self.app = create_app(self.config)
+        self.app.testing = True
+        self.client = self.app.test_client()
+
+    def tearDown(self) -> None:
+        self.tmp_dir.cleanup()
+
+    def test_setup_persists_selected_language(self) -> None:
+        response = self.client.post(
+            "/setup",
+            data={
+                "username": "admin",
+                "password": "admin123",
+                "password_confirm": "admin123",
+                "language": "en",
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("No periods configured", html)
+        self.assertIn("Go to periods", html)
+
+        with self.app.app_context():
+            user = self.app.extensions["repo"].get_user_by_username("admin")
+        self.assertIsNotNone(user)
+        self.assertEqual(user["language"], "en")
 
 
 class WebInstallerTests(unittest.TestCase):

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "costs-web",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["-m", "sa_costs_web", "--bind-host", "127.0.0.1", "--bind-port", "5050", "--db-path", "/tmp/sa_costs_preview.db", "--secret-key", "preview-secret"],
+      "port": 5050
+    }
+  ]
+}

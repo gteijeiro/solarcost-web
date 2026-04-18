@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Ingresar{% endblock %}
+{% block title %}{{ t('Ingresar') }}{% endblock %}
 {% block content %}
   <section class="auth-layout auth-layout-single">
     <article class="panel">
-      <h2>Iniciar sesion</h2>
+      <h2>{{ t('Iniciar sesion') }}</h2>
       <form method="post" class="stack-form">
         <label>
-          Usuario
+          {{ t('Usuario') }}
           <input type="text" name="username" autocomplete="username" required>
         </label>
         <label>
-          Contrasena
+          {{ t('Contrasena') }}
           <input type="password" name="password" autocomplete="current-password" required>
         </label>
-        <button type="submit" class="primary-button">Entrar</button>
+        <button type="submit" class="primary-button">{{ t('Entrar') }}</button>
       </form>
     </article>
   </section>

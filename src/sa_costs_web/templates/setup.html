@@ -1,32 +1,40 @@
 {% extends "base.html" %}
-{% block title %}Primer usuario{% endblock %}
+{% block title %}{{ t('Primer usuario') }}{% endblock %}
 {% block content %}
   <section class="auth-layout">
     <article class="hero-card">
-      <p class="eyebrow">Primer paso</p>
-      <h2>Crea el usuario administrador</h2>
+      <p class="eyebrow">{{ t('Primer paso') }}</p>
+      <h2>{{ t('Crea el usuario administrador') }}</h2>
       <p>
-        Este paso solo aparece una vez. Despues podras entrar con usuario y contrasena para configurar
-        franjas, periodos, cargos fijos e impuestos.
+        {{ t('Este paso solo aparece una vez. Despues podras entrar con usuario y contrasena para configurar franjas, periodos, cargos fijos e impuestos.') }}
       </p>
     </article>
 
     <article class="panel">
-      <h2>Alta inicial</h2>
+      <h2>{{ t('Alta inicial') }}</h2>
       <form method="post" class="stack-form">
         <label>
-          Usuario
+          {{ t('Usuario') }}
           <input type="text" name="username" autocomplete="username" required>
         </label>
         <label>
-          Contrasena
+          {{ t('Contrasena') }}
           <input type="password" name="password" autocomplete="new-password" required>
         </label>
         <label>
-          Repetir contrasena
+          {{ t('Repetir contrasena') }}
           <input type="password" name="password_confirm" autocomplete="new-password" required>
         </label>
-        <button type="submit" class="primary-button">Crear administrador</button>
+        <label>
+          {{ t('Idioma') }}
+          <select name="language">
+            {% for option in language_options %}
+              <option value="{{ option.code }}" {% if option.code == current_language %}selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <p class="muted">{{ t('Selecciona el idioma inicial de este usuario. Luego cada cuenta podra cambiarlo desde su perfil.') }}</p>
+        <button type="submit" class="primary-button">{{ t('Crear administrador') }}</button>
       </form>
     </article>
   </section>

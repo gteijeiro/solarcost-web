@@ -442,32 +442,50 @@ body.sidebar-collapsed .sidebar-user-meta {
 .primary-button,
 .danger-button {
   border: 0;
-  border-radius: 999px;
   text-decoration: none;
   font: inherit;
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, color 120ms ease;
 }
 
-.topnav a,
-.ghost-button {
+.topnav a {
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.64);
   color: var(--text);
   padding: 10px 16px;
   box-shadow: 0 10px 24px rgba(31, 42, 46, 0.07);
 }
 
+.ghost-button,
+.primary-button,
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.ghost-button {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+  box-shadow: 0 10px 24px rgba(31, 42, 46, 0.07);
+}
+
 .primary-button {
   background: linear-gradient(135deg, var(--brand), #115e59);
   color: white;
-  padding: 12px 18px;
   box-shadow: 0 16px 32px rgba(15, 118, 110, 0.25);
 }
 
 .danger-button {
   background: rgba(185, 28, 28, 0.12);
   color: var(--danger);
-  padding: 10px 14px;
+  box-shadow: inset 0 0 0 1px rgba(185, 28, 28, 0.14);
 }
 
 .inline-button {
@@ -480,6 +498,14 @@ body.sidebar-collapsed .sidebar-user-meta {
 .primary-button:hover,
 .danger-button:hover {
   transform: translateY(-1px);
+}
+
+.topnav a:focus-visible,
+.ghost-button:focus-visible,
+.primary-button:focus-visible,
+.danger-button:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.18);
+  outline-offset: 2px;
 }
 
 .content {
@@ -887,19 +913,177 @@ body.sidebar-collapsed .sidebar-user-meta {
   font-size: 0.75rem;
 }
 
-.stack-form,
-.inline-form-grid {
+.stack-form {
   display: grid;
   gap: 14px;
 }
 
 .inline-form-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.settings-editor-stack .collapse-body {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-editor-stack .list-stack.compact {
+  margin-top: 0;
+}
+
+.inline-form-grid > label,
+.list-card.settings-row-card label,
+.list-card.form-card label {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 160px;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.inline-form-grid > label > input,
+.inline-form-grid > label > select,
+.inline-form-grid > label > textarea,
+.list-card.settings-row-card label > input,
+.list-card.settings-row-card label > select,
+.list-card.settings-row-card label > textarea,
+.list-card.form-card label > input,
+.list-card.form-card label > select,
+.list-card.form-card label > textarea {
+  width: 100%;
+}
+
+.inline-form-grid > label.wide-field,
+.list-card.settings-row-card label.wide-field,
+.list-card.form-card label.wide-field {
+  flex: 2 1 260px;
+}
+
+.inline-form-grid > label.field-compact,
+.list-card.settings-row-card label.field-compact,
+.list-card.form-card label.field-compact {
+  flex: 0 1 100px;
+  min-width: 92px;
+}
+
+.inline-form-grid > label.checkbox-label,
+.list-card.settings-row-card label.checkbox-label,
+.list-card.form-card label.checkbox-label {
+  flex: 0 1 auto;
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(31, 42, 46, 0.1);
+  color: var(--text);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.inline-form-grid > label.checkbox-label input,
+.list-card.settings-row-card label.checkbox-label input,
+.list-card.form-card label.checkbox-label input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.inline-form-grid > button,
+.inline-form-grid > .primary-button,
+.inline-form-grid > .ghost-button,
+.inline-form-grid > .danger-button,
+.inline-form-grid > .inline-actions,
+.list-card.settings-row-card button,
+.list-card.form-card button {
+  flex: 0 0 auto;
+  align-self: flex-end;
+}
+
+.inline-form-grid > button,
+.inline-form-grid > .primary-button,
+.inline-form-grid > .ghost-button,
+.inline-form-grid > .danger-button,
+.inline-form-grid > .inline-actions {
+  margin-left: auto;
+}
+
+.stack-form > .ghost-button,
+.stack-form > .primary-button,
+.stack-form > .danger-button {
+  justify-self: start;
+  width: auto;
 }
 
 .wide-field {
-  grid-column: span 2;
+  min-width: 0;
+}
+
+.section-form-card-system {
+  border-color: rgba(15, 118, 110, 0.2);
+  background: linear-gradient(180deg, rgba(216, 243, 239, 0.55), rgba(255, 255, 255, 0.82));
+}
+
+.compact-action-button {
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 14px;
+}
+
+.list-card.settings-row-card,
+.list-card.form-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 18px;
+}
+
+.list-card.settings-row-card > form,
+.list-card.form-card > form {
+  display: contents;
+}
+
+.list-card.settings-row-card input[type="hidden"],
+.list-card.form-card input[type="hidden"] {
+  display: none;
+}
+
+.settings-row-actions {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.settings-row-actions + button,
+.settings-row-actions ~ button {
+  margin-left: 0;
+}
+
+.list-card.settings-row-card > form.settings-delete-form button,
+.list-card.form-card > form:not(.inline-form-grid):not(.settings-edit-form) button {
+  margin-left: 0;
+}
+
+.list-card.form-card > form.inline-form-grid button {
+  margin-left: auto;
+}
+
+.list-card.form-card > form:not(.inline-form-grid):not(.settings-edit-form) {
+  align-self: flex-end;
 }
 
 .readonly-grid {
@@ -1545,17 +1729,33 @@ code {
     grid-column: span 1;
   }
 
-  .inline-form-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .wide-field {
-    grid-column: span 2;
-  }
-
   .chart-grid,
   .comparison-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .inline-form-grid > label,
+  .list-card.settings-row-card label,
+  .list-card.form-card label,
+  .inline-form-grid > label.wide-field,
+  .list-card.settings-row-card label.wide-field,
+  .list-card.form-card label.wide-field {
+    flex: 1 1 calc(50% - 12px);
+  }
+
+  .inline-form-grid > label.field-compact,
+  .list-card.settings-row-card label.field-compact,
+  .list-card.form-card label.field-compact {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 0;
+  }
+
+  .inline-form-grid > label.checkbox-label,
+  .list-card.settings-row-card label.checkbox-label,
+  .list-card.form-card label.checkbox-label {
+    flex: 1 1 calc(50% - 12px);
   }
 }
 
@@ -1589,18 +1789,51 @@ code {
     font-size: 0.72rem;
   }
 
-  .inline-form-grid {
-    grid-template-columns: 1fr;
+  .inline-form-grid > label,
+  .list-card.settings-row-card label,
+  .list-card.form-card label,
+  .inline-form-grid > label.wide-field,
+  .list-card.settings-row-card label.wide-field,
+  .list-card.form-card label.wide-field,
+  .inline-form-grid > label.field-compact,
+  .list-card.settings-row-card label.field-compact,
+  .list-card.form-card label.field-compact,
+  .inline-form-grid > label.checkbox-label,
+  .list-card.settings-row-card label.checkbox-label,
+  .list-card.form-card label.checkbox-label {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
-  .wide-field {
-    grid-column: span 1;
+  .inline-form-grid > button,
+  .inline-form-grid > .primary-button,
+  .inline-form-grid > .ghost-button,
+  .inline-form-grid > .danger-button,
+  .list-card.settings-row-card button,
+  .list-card.form-card button,
+  .settings-row-actions {
+    margin-left: 0;
+    flex: 1 1 100%;
+    justify-content: center;
   }
 
-  .list-card,
+  .settings-row-actions {
+    justify-content: stretch;
+  }
+
+  .settings-row-actions > * {
+    flex: 1 1 auto;
+  }
+
+  .list-card:not(.settings-row-card):not(.form-card),
   .section-heading {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .list-card.settings-row-card,
+  .list-card.form-card {
+    padding: 14px 16px;
   }
 
   .bridge-rail,
