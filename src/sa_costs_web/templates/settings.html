@@ -1,21 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Configuracion{% endblock %}
+{% block title %}{{ t('Configuracion') }}{% endblock %}
 {% block content %}
   <section class="header-grid">
     <article class="hero-card">
-      <p class="eyebrow">Configuracion base</p>
-      <h2>Plantillas y reglas generales</h2>
-      <p>
-        Las franjas de energia se usan como plantilla inicial para nuevos periodos. Al crear un mes nuevo,
-        la app intenta copiar primero las tarifas del ultimo periodo que ya tenga precios propios; si no existe,
-        usa esta plantilla. Lo mismo pasa con los conceptos fijos y con las reglas por formula. Cada concepto
-        puede pertenecer a <strong>Servicio de energia</strong> o a <strong>IVA y otros conceptos</strong>.
-      </p>
+      <p class="eyebrow">{{ t('Configuracion base') }}</p>
+      <h2>{{ t('Plantillas y reglas generales') }}</h2>
+      <p>{{ t('Las franjas de energia se usan como plantilla inicial para nuevos periodos. Al crear un mes nuevo, la app intenta copiar primero las tarifas del ultimo periodo que ya tenga precios propios; si no existe, usa esta plantilla. Lo mismo pasa con los conceptos fijos y con las reglas por formula. Cada concepto puede pertenecer a la seccion que definas para organizar el costo final.') }}</p>
     </article>
 
     <article class="panel helper-card">
-      <h3>Ayuda de expresiones</h3>
-      <p>Ejemplos validos:</p>
+      <h3>{{ t('Ayuda de expresiones') }}</h3>
+      <p>{{ t('Ejemplos validos:') }}</p>
       <ul class="expression-list">
         <li><code>21% de total_factura</code></li>
         <li><code>5% de costo_energia</code></li>
@@ -23,8 +18,8 @@
         <li><code>1500</code></li>
         <li><code>0.03 * subtotal</code></li>
       </ul>
-      <p class="muted">Variables base: <code>costo_energia</code>, <code>energia_electrica</code>, <code>cargos_fijos</code>, <code>cargos_fijos_servicio</code>, <code>cargos_fijos_impuestos</code>, <code>subtotal</code>, <code>impuestos_acumulados</code>, <code>total_servicio_energia</code>, <code>iva_otros_conceptos</code>, <code>total_factura</code>, <code>consumo_kwh</code>.</p>
-      <p class="muted">Tambien puedes referenciar conceptos anteriores por alias. Si no cargas alias, puedes usar el nombre normalizado en minusculas y con guion bajo. Si una referencia no existe en ese periodo, vale <code>0</code>.</p>
+      <p class="muted">{{ t('Variables base:') }} <code>costo_energia</code>, <code>energia_electrica</code>, <code>cargos_fijos</code>, <code>cargos_fijos_servicio</code>, <code>cargos_fijos_impuestos</code>, <code>subtotal</code>, <code>impuestos_acumulados</code>, <code>total_servicio_energia</code>, <code>iva_otros_conceptos</code>, <code>total_factura</code>, <code>consumo_kwh</code>.</p>
+      <p class="muted">{{ t('Tambien puedes referenciar conceptos anteriores por alias. Si no cargas alias, puedes usar el nombre normalizado en minusculas y con guion bajo. Si una referencia no existe en ese periodo, vale 0.') }}</p>
     </article>
   </section>
 
@@ -32,33 +27,28 @@
     <article class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Respaldo</p>
-          <h2>Exportar configuracion</h2>
+          <p class="eyebrow">{{ t('Respaldo') }}</p>
+          <h2>{{ t('Exportar configuracion') }}</h2>
         </div>
       </div>
-      <p>
-        Descarga un archivo JSON con plantillas, periodos y reglas especificas aplicadas en cada periodo.
-      </p>
-      <a class="primary-button" href="{{ url_for('export_settings') }}">Descargar backup JSON</a>
+      <p>{{ t('Descarga un archivo JSON con plantillas, periodos y reglas especificas aplicadas en cada periodo.') }}</p>
+      <a class="primary-button" href="{{ url_for('export_settings') }}">{{ t('Descargar backup JSON') }}</a>
     </article>
 
     <article class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Restauracion</p>
-          <h2>Importar configuracion</h2>
+          <p class="eyebrow">{{ t('Restauracion') }}</p>
+          <h2>{{ t('Importar configuracion') }}</h2>
         </div>
       </div>
-      <p>
-        Sube un backup JSON, revisa su contenido y luego elige que secciones o periodos quieres aplicar.
-        Lo que desmarques se conserva tal como esta actualmente.
-      </p>
+      <p>{{ t('Sube un backup JSON, revisa su contenido y luego elige que secciones o periodos quieres aplicar. Lo que desmarques se conserva tal como esta actualmente.') }}</p>
       <form method="post" action="{{ url_for('preview_import_settings') }}" enctype="multipart/form-data" class="stack-form">
         <label>
-          Archivo JSON exportado
+          {{ t('Archivo JSON exportado') }}
           <input type="file" name="config_file" accept="application/json,.json" required>
         </label>
-        <button type="submit" class="danger-button">Previsualizar importacion</button>
+        <button type="submit" class="danger-button">{{ t('Previsualizar importacion') }}</button>
       </form>
     </article>
   </section>
@@ -67,17 +57,14 @@
     <section class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Previsualizacion</p>
-          <h2>Selecciona que importar</h2>
+          <p class="eyebrow">{{ t('Previsualizacion') }}</p>
+          <h2>{{ t('Selecciona que importar') }}</h2>
         </div>
         {% if import_preview.exported_at %}
-          <span class="pill">Exportado: {{ import_preview.exported_at | datetime_local }}</span>
+          <span class="pill">{{ t('Exportado: {value}', value=(import_preview.exported_at | datetime_local)) }}</span>
         {% endif %}
       </div>
-      <p>
-        Las plantillas marcadas reemplazaran solo esa seccion. Cada periodo marcado se creara o actualizara segun
-        su fecha de inicio. Los elementos desmarcados no se modifican.
-      </p>
+      <p>{{ t('Las plantillas marcadas reemplazaran solo esa seccion. Cada periodo marcado se creara o actualizara segun su fecha de inicio. Los elementos desmarcados no se modifican.') }}</p>
 
       <form method="post" action="{{ url_for('apply_import_settings') }}" class="stack-form">
         <textarea name="payload_json" hidden>{{ import_preview.payload_json }}</textarea>
@@ -93,19 +80,19 @@
                   {% if not section.count %}disabled{% endif %}
                 >
                 <span>
-                  <strong>{{ section.title }}</strong>
-                  <small class="muted">{{ section.description }}</small>
+                  <strong>{{ t(section.title) }}</strong>
+                  <small class="muted">{{ t(section.description) }}</small>
                 </span>
               </span>
-              <span class="pill">{{ section.count }} items</span>
+              <span class="pill">{{ section.count }} {{ t('items') }}</span>
             </label>
           {% endfor %}
         </div>
 
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Periodos</p>
-            <h3>Periodos incluidos en el backup</h3>
+            <p class="eyebrow">{{ t('Periodos') }}</p>
+            <h3>{{ t('Periodos incluidos en el backup') }}</h3>
           </div>
         </div>
 
@@ -117,185 +104,249 @@
                 <span>
                   <strong>{{ period.name }}</strong>
                   <small class="muted">
-                    Inicio {{ period.starts_on }}.
-                    {% if period.exists_locally %} Ya existe localmente y se actualizara.{% else %} Se creara como nuevo.{% endif %}
+                    {{ t('Inicio {starts_on}.', starts_on=period.starts_on) }}
+                    {% if period.exists_locally %} {{ t('Ya existe localmente y se actualizara.') }}{% else %} {{ t('Se creara como nuevo.') }}{% endif %}
                   </small>
                   <small class="muted">
-                    {{ period.band_count }} franjas, {{ period.fixed_count }} cargos fijos, {{ period.tax_count }} conceptos calculados.
-                    {% if period.utility_measured_kwh is not none %} Medicion compania: {{ period.utility_measured_kwh | kwh }} kWh.{% endif %}
+                    {{ t('{band_count} franjas, {fixed_count} cargos fijos, {tax_count} conceptos calculados.', band_count=period.band_count, fixed_count=period.fixed_count, tax_count=period.tax_count) }}
+                    {% if period.utility_measured_kwh is not none %} {{ t('Medicion compania: {value} kWh.', value=kwh_text(period.utility_measured_kwh)) }}{% endif %}
                   </small>
                 </span>
               </span>
               {% if period.has_inverter_data_issue %}
-                <span class="badge badge-warning">Marca error inversor</span>
+                <span class="badge badge-warning">{{ t('Marca error inversor') }}</span>
               {% endif %}
             </label>
           {% else %}
-            <p class="muted">Este backup no contiene periodos.</p>
+            <p class="muted">{{ t('Este backup no contiene periodos.') }}</p>
           {% endfor %}
         </div>
 
         <div class="section-heading">
-          <button type="submit" class="primary-button">Importar seleccionados</button>
-          <a class="ghost-button" href="{{ url_for('settings') }}">Cancelar</a>
+          <button type="submit" class="primary-button">{{ t('Importar seleccionados') }}</button>
+          <a class="ghost-button" href="{{ url_for('settings') }}">{{ t('Cancelar') }}</a>
         </div>
       </form>
     </section>
   {% endif %}
 
-  <section class="config-grid">
-    <article class="panel">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Franjas</p>
-          <h2>Plantilla de tarifa por consumo</h2>
+  <section class="collapse-stack settings-editor-stack">
+    <details class="collapse-panel">
+      <summary class="collapse-summary">
+        <span>
+          <small class="eyebrow">{{ t('Organizacion') }}</small>
+          <strong>{{ t('Secciones de costo') }}</strong>
+        </span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') }}</span>
+      </summary>
+      <div class="collapse-body">
+        <p class="muted">{{ t('Las secciones agrupan conceptos del costo final. Las dos predeterminadas no se pueden eliminar, pero si deshabilitar. Si una seccion esta deshabilitada, sus importes no participan del calculo.') }}</p>
+
+        <form method="post" action="{{ url_for('save_section') }}" class="inline-form-grid">
+          <input type="hidden" name="section_id" value="">
+          <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ charge_sections|length + 1 }}" min="1"></label>
+          <label class="wide-field">{{ t('Nombre') }}<input type="text" name="name" placeholder="{{ t('Nueva seccion') }}" required></label>
+          <label class="checkbox-label"><input type="checkbox" name="enabled" checked> {{ t('Activa') }}</label>
+          <button type="submit" class="primary-button compact-action-button">{{ t('Agregar') }}</button>
+        </form>
+
+        <div class="list-stack compact">
+          {% for section in charge_sections %}
+            <div class="list-card settings-row-card {{ 'section-form-card-system' if section.is_system else '' }}">
+              <form method="post" action="{{ url_for('save_section') }}" class="settings-edit-form">
+                <input type="hidden" name="section_id" value="{{ section.id or '' }}">
+                <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ section.position }}" min="1"></label>
+                <label class="wide-field">
+                  {{ t('Nombre') }}
+                  <input type="text" name="name" value="{{ section.display_name or section.name }}" {% if section.is_system %}readonly{% endif %} required>
+                </label>
+                <label class="checkbox-label"><input type="checkbox" name="enabled" {% if section.enabled %}checked{% endif %}> {{ t('Activa') }}</label>
+                <div class="settings-row-actions">
+                  {% if section.is_system %}
+                    <span class="pill">{{ t('Predeterminada') }}</span>
+                  {% endif %}
+                  <button type="submit" class="ghost-button compact-action-button">{{ t('Guardar') }}</button>
+                </div>
+              </form>
+              {% if not section.is_system %}
+                <form method="post" action="{{ url_for('delete_section', section_id=section.id) }}" class="settings-delete-form">
+                  <button type="submit" class="danger-button compact-action-button">{{ t('Eliminar') }}</button>
+                </form>
+              {% endif %}
+            </div>
+          {% endfor %}
         </div>
       </div>
+    </details>
 
-      <form method="post" action="{{ url_for('save_default_band') }}" class="inline-form-grid">
-        <input type="hidden" name="band_id" value="">
-        <label>Orden<input type="number" name="position" value="{{ template_bands|length + 1 }}" min="1"></label>
-        <label>Etiqueta<input type="text" name="label" placeholder="Consumo base"></label>
-        <label>Desde kWh<input type="number" step="0.001" name="from_kwh" value="0" required></label>
-        <label>Hasta kWh<input type="number" step="0.001" name="to_kwh" placeholder="Sin limite"></label>
-        <label>Precio por kWh<input type="number" step="0.0001" name="price_per_kwh" value="0" required></label>
-        <button type="submit" class="primary-button">Agregar franja a la plantilla</button>
-      </form>
+    <details class="collapse-panel">
+      <summary class="collapse-summary">
+        <span>
+          <small class="eyebrow">{{ t('Franjas') }}</small>
+          <strong>{{ t('Plantilla de tarifa por consumo') }}</strong>
+        </span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') }}</span>
+      </summary>
+      <div class="collapse-body">
+        <form method="post" action="{{ url_for('save_default_band') }}" class="inline-form-grid">
+          <input type="hidden" name="band_id" value="">
+          <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ template_bands|length + 1 }}" min="1"></label>
+          <label>{{ t('Etiqueta') }}<input type="text" name="label" placeholder="{{ t('Consumo base') }}"></label>
+          <label>{{ t('Desde') }} kWh<input type="number" step="0.001" name="from_kwh" value="0" required></label>
+          <label>{{ t('Hasta') }} kWh<input type="number" step="0.001" name="to_kwh" placeholder="{{ t('Sin limite') }}"></label>
+          <label>{{ t('Precio por kWh') }}<input type="number" step="0.0001" name="price_per_kwh" value="0" required></label>
+          <button type="submit" class="primary-button compact-action-button">{{ t('Agregar') }}</button>
+        </form>
 
-      <div class="list-stack compact">
-        {% for band in template_bands %}
-          <div class="list-card form-card">
-            <form method="post" action="{{ url_for('save_default_band') }}" class="inline-form-grid">
-              <input type="hidden" name="band_id" value="{{ band.id }}">
-              <label>Orden<input type="number" name="position" value="{{ band.position }}" min="1"></label>
-              <label>Etiqueta<input type="text" name="label" value="{{ band.label }}"></label>
-              <label>Desde kWh<input type="number" step="0.001" name="from_kwh" value="{{ band.from_kwh }}" required></label>
-              <label>Hasta kWh<input type="number" step="0.001" name="to_kwh" value="{{ '' if band.to_kwh is none else band.to_kwh }}"></label>
-              <label>Precio por kWh<input type="number" step="0.0001" name="price_per_kwh" value="{{ band.price_per_kwh }}" required></label>
-              <button type="submit" class="ghost-button">Guardar</button>
-            </form>
-            <form method="post" action="{{ url_for('delete_default_band', band_id=band.id) }}">
-              <button type="submit" class="danger-button">Eliminar</button>
-            </form>
-          </div>
-        {% else %}
-          <p class="muted">No hay franjas en la plantilla. Los periodos nuevos no podran copiar precios hasta que cargues al menos una.</p>
-        {% endfor %}
-      </div>
-    </article>
-
-    <article class="panel">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Cargos fijos</p>
-          <h2>Plantilla de importes fijos</h2>
+        <div class="list-stack compact">
+          {% for band in template_bands %}
+            <div class="list-card settings-row-card">
+              <form method="post" action="{{ url_for('save_default_band') }}" class="settings-edit-form">
+                <input type="hidden" name="band_id" value="{{ band.id }}">
+                <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ band.position }}" min="1"></label>
+                <label>{{ t('Etiqueta') }}<input type="text" name="label" value="{{ band.label }}"></label>
+                <label>{{ t('Desde') }} kWh<input type="number" step="0.001" name="from_kwh" value="{{ band.from_kwh }}" required></label>
+                <label>{{ t('Hasta') }} kWh<input type="number" step="0.001" name="to_kwh" value="{{ '' if band.to_kwh is none else band.to_kwh }}"></label>
+                <label>{{ t('Precio por kWh') }}<input type="number" step="0.0001" name="price_per_kwh" value="{{ band.price_per_kwh }}" required></label>
+                <div class="settings-row-actions">
+                  <button type="submit" class="ghost-button compact-action-button">{{ t('Guardar') }}</button>
+                </div>
+              </form>
+              <form method="post" action="{{ url_for('delete_default_band', band_id=band.id) }}" class="settings-delete-form">
+                <button type="submit" class="danger-button compact-action-button">{{ t('Eliminar') }}</button>
+              </form>
+            </div>
+          {% else %}
+            <p class="muted">{{ t('No hay franjas en la plantilla. Los periodos nuevos no podran copiar precios hasta que cargues al menos una.') }}</p>
+          {% endfor %}
         </div>
       </div>
+    </details>
 
-      <form method="post" action="{{ url_for('save_default_charge') }}" class="inline-form-grid">
-        <input type="hidden" name="rule_id" value="">
-        <input type="hidden" name="kind" value="fixed">
-        <label>Orden<input type="number" name="position" value="{{ default_fixed|length + 1 }}" min="1"></label>
-        <label>
-          Seccion
-          <select name="section">
-            <option value="service" selected>Servicio de energia</option>
-            <option value="tax">IVA y otros conceptos</option>
-          </select>
-        </label>
-        <label>Nombre<input type="text" name="name" placeholder="Cargo fijo" required></label>
-        <label>Alias<input type="text" name="alias" placeholder="cargo_fijo"></label>
-        <label>Importe<input type="number" step="0.01" name="amount" value="0" required></label>
-        <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard"> Mostrar en dashboard</label>
-        <label class="checkbox-label"><input type="checkbox" name="enabled" checked> Activo</label>
-        <button type="submit" class="primary-button">Agregar cargo a la plantilla</button>
-      </form>
+    <details class="collapse-panel">
+      <summary class="collapse-summary">
+        <span>
+          <small class="eyebrow">{{ t('Cargos fijos') }}</small>
+          <strong>{{ t('Plantilla de importes fijos') }}</strong>
+        </span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') }}</span>
+      </summary>
+      <div class="collapse-body">
+        <form method="post" action="{{ url_for('save_default_charge') }}" class="inline-form-grid">
+          <input type="hidden" name="rule_id" value="">
+          <input type="hidden" name="kind" value="fixed">
+          <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ default_fixed|length + 1 }}" min="1"></label>
+          <label>
+            {{ t('Seccion') }}
+            <select name="section">
+              {% for section in charge_sections %}
+                <option value="{{ section.code }}" {% if section.is_default_service %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>{{ t('Nombre') }}<input type="text" name="name" placeholder="{{ t('Cargo fijo') }}" required></label>
+          <label>{{ t('Alias') }}<input type="text" name="alias" placeholder="cargo_fijo"></label>
+          <label>{{ t('Importe') }}<input type="number" step="0.01" name="amount" value="0" required></label>
+          <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard"> {{ t('Mostrar en dashboard') }}</label>
+          <label class="checkbox-label"><input type="checkbox" name="enabled" checked> {{ t('Activo') }}</label>
+          <button type="submit" class="primary-button compact-action-button">{{ t('Agregar') }}</button>
+        </form>
 
-      <div class="list-stack compact">
-        {% for rule in default_fixed %}
-          <div class="list-card form-card">
-            <form method="post" action="{{ url_for('save_default_charge') }}" class="inline-form-grid">
-              <input type="hidden" name="rule_id" value="{{ rule.id }}">
-              <input type="hidden" name="kind" value="fixed">
-              <label>Orden<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
-              <label>
-                Seccion
-                <select name="section">
-                  <option value="service" {% if (rule.section or 'service') == 'service' %}selected{% endif %}>Servicio de energia</option>
-                  <option value="tax" {% if rule.section == 'tax' %}selected{% endif %}>IVA y otros conceptos</option>
-                </select>
-              </label>
-              <label>Nombre<input type="text" name="name" value="{{ rule.name }}" required></label>
-              <label>Alias<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
-              <label>Importe<input type="number" step="0.01" name="amount" value="{{ rule.amount }}" required></label>
-              <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard" {% if rule.show_on_dashboard %}checked{% endif %}> Mostrar en dashboard</label>
-              <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> Activo</label>
-              <button type="submit" class="ghost-button">Guardar</button>
-            </form>
-            <form method="post" action="{{ url_for('delete_default_charge', rule_id=rule.id) }}">
-              <button type="submit" class="danger-button">Eliminar</button>
-            </form>
-          </div>
-        {% else %}
-          <p class="muted">No hay cargos fijos en la plantilla. Los periodos nuevos no podran copiarlos hasta que cargues al menos uno.</p>
-        {% endfor %}
-      </div>
-    </article>
-  </section>
-
-  <section class="panel">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Reglas por formula</p>
-        <h2>Conceptos calculados</h2>
-      </div>
-    </div>
-
-    <form method="post" action="{{ url_for('save_default_charge') }}" class="inline-form-grid">
-      <input type="hidden" name="rule_id" value="">
-      <input type="hidden" name="kind" value="tax">
-      <label>Orden<input type="number" name="position" value="{{ default_taxes|length + 1 }}" min="1"></label>
-      <label>
-        Seccion
-        <select name="section">
-          <option value="service">Servicio de energia</option>
-          <option value="tax" selected>IVA y otros conceptos</option>
-        </select>
-      </label>
-      <label>Nombre<input type="text" name="name" placeholder="IVA" required></label>
-      <label>Alias<input type="text" name="alias" placeholder="iva_21"></label>
-      <label class="wide-field">Expresion<input type="text" name="expression" placeholder="21% de total_factura" required></label>
-      <label class="checkbox-label"><input type="checkbox" name="enabled" checked> Activo</label>
-      <button type="submit" class="primary-button">Agregar impuesto</button>
-    </form>
-
-    <div class="list-stack compact">
-      {% for rule in default_taxes %}
-        <div class="list-card form-card">
-          <form method="post" action="{{ url_for('save_default_charge') }}" class="inline-form-grid">
-            <input type="hidden" name="rule_id" value="{{ rule.id }}">
-            <input type="hidden" name="kind" value="tax">
-            <label>Orden<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
-            <label>
-              Seccion
-              <select name="section">
-                <option value="service" {% if rule.section == 'service' %}selected{% endif %}>Servicio de energia</option>
-                <option value="tax" {% if (rule.section or 'tax') == 'tax' %}selected{% endif %}>IVA y otros conceptos</option>
-              </select>
-            </label>
-            <label>Nombre<input type="text" name="name" value="{{ rule.name }}" required></label>
-            <label>Alias<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
-            <label class="wide-field">Expresion<input type="text" name="expression" value="{{ rule.expression }}" required></label>
-            <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> Activo</label>
-            <button type="submit" class="ghost-button">Guardar</button>
-          </form>
-          <form method="post" action="{{ url_for('delete_default_charge', rule_id=rule.id) }}">
-            <button type="submit" class="danger-button">Eliminar</button>
-          </form>
+        <div class="list-stack compact">
+          {% for rule in default_fixed %}
+            <div class="list-card settings-row-card">
+              <form method="post" action="{{ url_for('save_default_charge') }}" class="settings-edit-form">
+                <input type="hidden" name="rule_id" value="{{ rule.id }}">
+                <input type="hidden" name="kind" value="fixed">
+                <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
+                <label>
+                  {{ t('Seccion') }}
+                  <select name="section">
+                    {% for section in charge_sections %}
+                      <option value="{{ section.code }}" {% if (rule.section or 'service') == section.code %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>{{ t('Nombre') }}<input type="text" name="name" value="{{ rule.name }}" required></label>
+                <label>{{ t('Alias') }}<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
+                <label>{{ t('Importe') }}<input type="number" step="0.01" name="amount" value="{{ rule.amount }}" required></label>
+                <label class="checkbox-label"><input type="checkbox" name="show_on_dashboard" {% if rule.show_on_dashboard %}checked{% endif %}> {{ t('Mostrar en dashboard') }}</label>
+                <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> {{ t('Activo') }}</label>
+                <div class="settings-row-actions">
+                  <button type="submit" class="ghost-button compact-action-button">{{ t('Guardar') }}</button>
+                </div>
+              </form>
+              <form method="post" action="{{ url_for('delete_default_charge', rule_id=rule.id) }}" class="settings-delete-form">
+                <button type="submit" class="danger-button compact-action-button">{{ t('Eliminar') }}</button>
+              </form>
+            </div>
+          {% else %}
+            <p class="muted">{{ t('No hay cargos fijos en la plantilla. Los periodos nuevos no podran copiarlos hasta que cargues al menos uno.') }}</p>
+          {% endfor %}
         </div>
-      {% else %}
-        <p class="muted">No hay impuestos configurados.</p>
-      {% endfor %}
-    </div>
+      </div>
+    </details>
+
+    <details class="collapse-panel">
+      <summary class="collapse-summary">
+        <span>
+          <small class="eyebrow">{{ t('Reglas por formula') }}</small>
+          <strong>{{ t('Conceptos calculados') }}</strong>
+        </span>
+        <span class="ghost-button collapse-trigger">{{ t('Editar') }}</span>
+      </summary>
+      <div class="collapse-body">
+        <form method="post" action="{{ url_for('save_default_charge') }}" class="inline-form-grid">
+          <input type="hidden" name="rule_id" value="">
+          <input type="hidden" name="kind" value="tax">
+          <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ default_taxes|length + 1 }}" min="1"></label>
+          <label>
+            {{ t('Seccion') }}
+            <select name="section">
+              {% for section in charge_sections %}
+                <option value="{{ section.code }}" {% if section.is_default_tax %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>{{ t('Nombre') }}<input type="text" name="name" placeholder="{{ t('IVA') }}" required></label>
+          <label>{{ t('Alias') }}<input type="text" name="alias" placeholder="iva_21"></label>
+          <label class="wide-field">{{ t('Expresion') }}<input type="text" name="expression" placeholder="21% de total_factura" required></label>
+          <label class="checkbox-label"><input type="checkbox" name="enabled" checked> {{ t('Activo') }}</label>
+          <button type="submit" class="primary-button compact-action-button">{{ t('Agregar') }}</button>
+        </form>
+
+        <div class="list-stack compact">
+          {% for rule in default_taxes %}
+            <div class="list-card settings-row-card">
+              <form method="post" action="{{ url_for('save_default_charge') }}" class="settings-edit-form">
+                <input type="hidden" name="rule_id" value="{{ rule.id }}">
+                <input type="hidden" name="kind" value="tax">
+                <label class="field-compact">{{ t('Orden') }}<input type="number" name="position" value="{{ rule.position }}" min="1"></label>
+                <label>
+                  {{ t('Seccion') }}
+                  <select name="section">
+                    {% for section in charge_sections %}
+                      <option value="{{ section.code }}" {% if (rule.section or 'tax') == section.code %}selected{% endif %}>{{ section.display_name }}{% if not section.enabled %} ({{ t('Deshabilitada') }}){% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </label>
+                <label>{{ t('Nombre') }}<input type="text" name="name" value="{{ rule.name }}" required></label>
+                <label>{{ t('Alias') }}<input type="text" name="alias" value="{{ rule.alias or '' }}"></label>
+                <label class="wide-field">{{ t('Expresion') }}<input type="text" name="expression" value="{{ rule.expression }}" required></label>
+                <label class="checkbox-label"><input type="checkbox" name="enabled" {% if rule.enabled %}checked{% endif %}> {{ t('Activo') }}</label>
+                <div class="settings-row-actions">
+                  <button type="submit" class="ghost-button compact-action-button">{{ t('Guardar') }}</button>
+                </div>
+              </form>
+              <form method="post" action="{{ url_for('delete_default_charge', rule_id=rule.id) }}" class="settings-delete-form">
+                <button type="submit" class="danger-button compact-action-button">{{ t('Eliminar') }}</button>
+              </form>
+            </div>
+          {% else %}
+            <p class="muted">{{ t('No hay impuestos configurados.') }}</p>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
   </section>
 {% endblock %}

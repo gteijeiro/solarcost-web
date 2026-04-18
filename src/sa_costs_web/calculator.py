@@ -10,6 +10,12 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from .sections import (
+    DEFAULT_SERVICE_SECTION_CODE,
+    DEFAULT_TAX_SECTION_CODE,
+    SYSTEM_SECTIONS,
+)
+
 
 VARIABLE_ALIASES = {
     "total_factura": "total_factura",
@@ -122,10 +128,48 @@ def build_period_ranges(periods: list[dict[str, Any]], *, today: date | None = N
     return list(reversed(ranges))
 
 
+def normalize_sections(sections: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    section_map: dict[str, dict[str, Any]] = {}
+    for system_section in SYSTEM_SECTIONS:
+        section_map[system_section["code"]] = {
+            **system_section,
+            "id": None,
+            "enabled": bool(system_section.get("enabled", True)),
+        }
+
+    for raw_section in sections or []:
+        code = str(raw_section.get("code") or "").strip()
+        if not code:
+            continue
+        existing = section_map.get(code, {})
+        section_map[code] = {
+            **existing,
+            **raw_section,
+            "code": code,
+            "name": str(raw_section.get("name") or existing.get("name") or code),
+            "position": int(raw_section.get("position") or existing.get("position") or 0),
+            "is_system": bool(raw_section.get("is_system", existing.get("is_system", False))),
+            "enabled": bool(raw_section.get("enabled", existing.get("enabled", True))),
+        }
+
+    return sorted(
+        section_map.values(),
+        key=lambda item: (int(item.get("position") or 0), str(item.get("name") or ""), str(item.get("code") or "")),
+    )
+
+
+def section_enabled(sections_by_code: dict[str, dict[str, Any]], code: str) -> bool:
+    section = sections_by_code.get(code)
+    if section is None:
+        return True
+    return bool(section.get("enabled", True))
+
+
 def calculate_period_summary(
     period: dict[str, Any],
     points: list[dict[str, Any]],
     *,
+    sections: list[dict[str, Any]],
     tariff_bands: list[dict[str, Any]],
     fixed_charges: list[dict[str, Any]],
     tax_rules: list[dict[str, Any]],
@@ -172,10 +216,12 @@ def calculate_period_summary(
         if inverter_consumption_kwh:
             consumption_difference_percent = round((consumption_difference_kwh / inverter_consumption_kwh) * 100, 6)
 
+    normalized_sections = normalize_sections(sections)
     inverter_variant = calculate_cost_variant(
         billed_consumption_kwh=inverter_consumption_kwh,
         inverter_consumption_kwh=inverter_consumption_kwh,
         utility_consumption_kwh=utility_consumption_kwh,
+        sections=normalized_sections,
         tariff_bands=tariff_bands,
         fixed_charges=fixed_charges,
         tax_rules=tax_rules,
@@ -185,6 +231,7 @@ def calculate_period_summary(
             billed_consumption_kwh=round(utility_consumption_kwh, 6),
             inverter_consumption_kwh=inverter_consumption_kwh,
             utility_consumption_kwh=utility_consumption_kwh,
+            sections=normalized_sections,
             tariff_bands=tariff_bands,
             fixed_charges=fixed_charges,
             tax_rules=tax_rules,
@@ -196,6 +243,7 @@ def calculate_period_summary(
         billed_consumption_kwh=inverter_load_kwh,
         inverter_consumption_kwh=inverter_consumption_kwh,
         utility_consumption_kwh=utility_consumption_kwh,
+        sections=normalized_sections,
         tariff_bands=tariff_bands,
         fixed_charges=fixed_charges,
         tax_rules=tax_rules,
@@ -264,12 +312,15 @@ def calculate_period_summary(
         "formula_breakdown": active_variant["formula_breakdown"],
         "service_breakdown": active_variant["service_breakdown"],
         "other_concepts_breakdown": active_variant["other_concepts_breakdown"],
+        "section_breakdowns": active_variant["section_breakdowns"],
+        "section_totals": active_variant["section_totals"],
         "energy_cost": active_variant["energy_cost"],
         "fixed_total": active_variant["fixed_total"],
         "tax_total": active_variant["other_concepts_total"],
         "formula_total": active_variant["formula_total"],
         "service_total": active_variant["service_total"],
         "other_concepts_total": active_variant["other_concepts_total"],
+        "extra_sections_total": active_variant["extra_sections_total"],
         "service_fixed_total": active_variant["service_fixed_total"],
         "other_fixed_total": active_variant["other_fixed_total"],
         "service_formula_total": active_variant["service_formula_total"],
@@ -326,7 +377,6 @@ def build_daily_energy_cost_breakdown(
 
     rows: list[dict[str, Any]] = []
     billed_so_far = 0.0
-    cost_so_far = 0.0
 
     for index, day in enumerate(days):
         point = points_by_date.get(day)
@@ -340,8 +390,6 @@ def build_daily_energy_cost_breakdown(
         billed_so_far += billed_kwh
         cumulative_energy_cost = calculate_energy_cost(billed_so_far, tariff_bands)[1]
         energy_cost = cumulative_energy_cost - previous_energy_cost
-        cost_so_far += energy_cost
-
         rows.append(
             {
                 "date": day.isoformat(),
@@ -354,6 +402,13 @@ def build_daily_energy_cost_breakdown(
                 "cumulative_energy_cost": round(cumulative_energy_cost, 6),
             }
         )
+
+    if expected_energy_cost <= 0:
+        cumulative_cost = 0.0
+        for row in rows:
+            row["energy_cost"] = 0.0
+            row["cumulative_energy_cost"] = cumulative_cost
+        return rows, note
 
     if rows:
         energy_delta = round(float(expected_energy_cost) - float(rows[-1]["cumulative_energy_cost"]), 6)
@@ -369,12 +424,27 @@ def calculate_cost_variant(
     billed_consumption_kwh: float,
     inverter_consumption_kwh: float,
     utility_consumption_kwh: float | None,
+    sections: list[dict[str, Any]],
     tariff_bands: list[dict[str, Any]],
     fixed_charges: list[dict[str, Any]],
     tax_rules: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    energy_breakdown, energy_cost = calculate_energy_cost(billed_consumption_kwh, tariff_bands)
-    fixed_breakdown, fixed_total = calculate_fixed_charges(fixed_charges)
+    section_list = normalize_sections(sections)
+    sections_by_code = {
+        str(section.get("code") or ""): section
+        for section in section_list
+    }
+    raw_energy_breakdown, raw_energy_cost = calculate_energy_cost(billed_consumption_kwh, tariff_bands)
+    energy_section_enabled = section_enabled(sections_by_code, DEFAULT_SERVICE_SECTION_CODE)
+    energy_breakdown = [
+        {
+            **item,
+            "subtotal": round(float(item.get("subtotal") or 0.0), 6) if energy_section_enabled else 0.0,
+        }
+        for item in raw_energy_breakdown
+    ]
+    energy_cost = round(raw_energy_cost, 6) if energy_section_enabled else 0.0
+    fixed_breakdown, fixed_total = calculate_fixed_charges(fixed_charges, sections_by_code=sections_by_code)
     formula_breakdown, formulas_total = calculate_taxes(
         tax_rules,
         consumo_kwh=billed_consumption_kwh,
@@ -383,36 +453,58 @@ def calculate_cost_variant(
         costo_energia=energy_cost,
         cargos_fijos=fixed_total,
         fixed_charges=fixed_breakdown,
+        sections_by_code=sections_by_code,
     )
 
     subtotal = round(energy_cost + fixed_total, 6)
-    service_fixed_total = sum_breakdown_amounts(fixed_breakdown, section="service")
-    other_fixed_total = sum_breakdown_amounts(fixed_breakdown, section="tax")
-    service_formula_total = sum_breakdown_amounts(formula_breakdown, section="service")
-    other_formula_total = sum_breakdown_amounts(formula_breakdown, section="tax")
+    service_fixed_total = sum_breakdown_amounts(fixed_breakdown, section=DEFAULT_SERVICE_SECTION_CODE)
+    other_fixed_total = sum_breakdown_amounts(fixed_breakdown, section=DEFAULT_TAX_SECTION_CODE)
+    service_formula_total = sum_breakdown_amounts(formula_breakdown, section=DEFAULT_SERVICE_SECTION_CODE)
+    other_formula_total = sum_breakdown_amounts(formula_breakdown, section=DEFAULT_TAX_SECTION_CODE)
     service_total = round(energy_cost + service_fixed_total + service_formula_total, 6)
     other_concepts_total = round(other_fixed_total + other_formula_total, 6)
-    total = round(service_total + other_concepts_total, 6)
+    section_breakdowns = build_section_breakdowns(
+        sections=section_list,
+        energy_cost=energy_cost,
+        fixed_breakdown=fixed_breakdown,
+        formula_breakdown=formula_breakdown,
+    )
+    section_totals = [
+        {
+            "code": str(section["code"]),
+            "name": str(section["name"]),
+            "enabled": bool(section.get("enabled", True)),
+            "is_system": bool(section.get("is_system", False)),
+            "items": breakdown["items"],
+            "total": breakdown["total"],
+        }
+        for section, breakdown in section_breakdowns
+    ]
+    total = round(sum(float(item["total"]) for item in section_totals), 6)
+    extra_sections_total = round(
+        total - service_total - other_concepts_total,
+        6,
+    )
+    section_breakdown_map = {
+        str(section["code"]): breakdown["items"]
+        for section, breakdown in section_breakdowns
+    }
 
     return {
         "consumption_kwh": billed_consumption_kwh,
         "energy_breakdown": energy_breakdown,
         "fixed_breakdown": fixed_breakdown,
         "formula_breakdown": formula_breakdown,
-        "service_breakdown": build_service_breakdown(
-            energy_cost=energy_cost,
-            fixed_breakdown=fixed_breakdown,
-            formula_breakdown=formula_breakdown,
-        ),
-        "other_concepts_breakdown": build_other_concepts_breakdown(
-            fixed_breakdown=fixed_breakdown,
-            formula_breakdown=formula_breakdown,
-        ),
+        "service_breakdown": section_breakdown_map.get(DEFAULT_SERVICE_SECTION_CODE, []),
+        "other_concepts_breakdown": section_breakdown_map.get(DEFAULT_TAX_SECTION_CODE, []),
+        "section_breakdowns": section_totals,
+        "section_totals": section_totals,
         "energy_cost": energy_cost,
         "fixed_total": fixed_total,
         "formula_total": formulas_total,
         "service_total": service_total,
         "other_concepts_total": other_concepts_total,
+        "extra_sections_total": extra_sections_total,
         "service_fixed_total": service_fixed_total,
         "other_fixed_total": other_fixed_total,
         "service_formula_total": service_formula_total,
@@ -465,14 +557,20 @@ def _default_band_label(start: float, end: float | None) -> str:
     return f"{start:g} a {end:g} kWh"
 
 
-def calculate_fixed_charges(fixed_charges: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], float]:
+def calculate_fixed_charges(
+    fixed_charges: list[dict[str, Any]],
+    *,
+    sections_by_code: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], float]:
     breakdown: list[dict[str, Any]] = []
     total = 0.0
 
     for charge in fixed_charges:
         if not charge.get("enabled", 1):
             continue
-        amount = round(float(charge.get("amount") or 0.0), 6)
+        configured_amount = round(float(charge.get("amount") or 0.0), 6)
+        section_code = charge_section(charge, default=DEFAULT_SERVICE_SECTION_CODE)
+        amount = configured_amount if section_enabled(sections_by_code, section_code) else 0.0
         total += amount
         breakdown.append(
             {
@@ -480,10 +578,10 @@ def calculate_fixed_charges(fixed_charges: list[dict[str, Any]]) -> tuple[list[d
                 "kind": "fixed",
                 "name": charge["name"],
                 "alias": charge.get("alias"),
-                "section": charge_section(charge, default="service"),
+                "section": section_code,
                 "position": int(charge.get("position") or 0),
                 "show_on_dashboard": bool(charge.get("show_on_dashboard", 0)),
-                "configured_value": amount,
+                "configured_value": configured_amount,
                 "amount": amount,
             }
         )
@@ -500,22 +598,35 @@ def calculate_taxes(
     costo_energia: float,
     cargos_fijos: float,
     fixed_charges: list[dict[str, Any]] | None = None,
+    sections_by_code: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], float]:
     subtotal = round(costo_energia + cargos_fijos, 6)
     formulas_total = 0.0
     breakdown: list[dict[str, Any]] = []
     reference_context = build_named_reference_context(fixed_charges or [])
-    fixed_service_total = sum_breakdown_amounts(fixed_charges or [], section="service")
-    fixed_other_total = sum_breakdown_amounts(fixed_charges or [], section="tax")
-    service_formulas_so_far = 0.0
-    other_formulas_so_far = 0.0
+    section_states = sections_by_code or {}
+    section_totals = {
+        str(code): 0.0
+        for code in section_states
+    }
+    section_totals.setdefault(DEFAULT_SERVICE_SECTION_CODE, 0.0)
+    section_totals.setdefault(DEFAULT_TAX_SECTION_CODE, 0.0)
+    section_totals[DEFAULT_SERVICE_SECTION_CODE] = round(costo_energia, 6)
+    for item in fixed_charges or []:
+        section_code = charge_section(item, default=DEFAULT_SERVICE_SECTION_CODE)
+        section_totals[section_code] = round(
+            float(section_totals.get(section_code, 0.0)) + float(item.get("amount") or 0.0),
+            6,
+        )
+    fixed_service_total = sum_breakdown_amounts(fixed_charges or [], section=DEFAULT_SERVICE_SECTION_CODE)
+    fixed_other_total = sum_breakdown_amounts(fixed_charges or [], section=DEFAULT_TAX_SECTION_CODE)
 
     for rule in tax_rules:
         if not rule.get("enabled", 1):
             continue
-        section = charge_section(rule, default="tax")
-        current_service_total = round(costo_energia + fixed_service_total + service_formulas_so_far, 6)
-        current_other_total = round(fixed_other_total + other_formulas_so_far, 6)
+        section = charge_section(rule, default=DEFAULT_TAX_SECTION_CODE)
+        current_service_total = round(float(section_totals.get(DEFAULT_SERVICE_SECTION_CODE, 0.0)), 6)
+        current_other_total = round(float(section_totals.get(DEFAULT_TAX_SECTION_CODE, 0.0)), 6)
 
         context = {
             "consumo_kwh": consumo_kwh,
@@ -533,15 +644,14 @@ def calculate_taxes(
             "total_servicio_energia": current_service_total,
             "iva_otros_conceptos": current_other_total,
             "otros_conceptos": current_other_total,
-            "total_factura": current_service_total + current_other_total,
+            "total_factura": round(sum(float(value) for value in section_totals.values()), 6),
         }
         context.update(reference_context)
         amount = evaluate_tax_expression(str(rule.get("expression") or ""), context)
+        if not section_enabled(section_states, section):
+            amount = 0.0
         formulas_total = round(formulas_total + amount, 6)
-        if section == "service":
-            service_formulas_so_far = round(service_formulas_so_far + amount, 6)
-        else:
-            other_formulas_so_far = round(other_formulas_so_far + amount, 6)
+        section_totals[section] = round(float(section_totals.get(section, 0.0)) + amount, 6)
         breakdown.append(
             {
                 "id": rule["id"],
@@ -574,26 +684,77 @@ def parse_optional_number(value: object) -> float | None:
 
 def charge_section(item: dict[str, Any], *, default: str) -> str:
     section = item.get("section")
-    if section in {"service", "tax"}:
-        return str(section)
+    if isinstance(section, str) and section.strip():
+        return str(section).strip()
     kind = str(item.get("kind") or "")
     if kind == "fixed":
-        return "service"
+        return DEFAULT_SERVICE_SECTION_CODE
     if kind in {"tax", "formula"}:
-        return "tax"
+        return DEFAULT_TAX_SECTION_CODE
     expression = item.get("expression")
     if isinstance(expression, str) and expression.strip():
-        return "tax"
+        return DEFAULT_TAX_SECTION_CODE
     return default
 
 
 def sum_breakdown_amounts(items: list[dict[str, Any]], *, section: str | None = None) -> float:
     total = 0.0
     for item in items:
-        if section is not None and charge_section(item, default="service") != section:
+        if section is not None and charge_section(item, default=DEFAULT_SERVICE_SECTION_CODE) != section:
             continue
         total += float(item.get("amount") or 0.0)
     return round(total, 6)
+
+
+def build_section_breakdowns(
+    *,
+    sections: list[dict[str, Any]],
+    energy_cost: float,
+    fixed_breakdown: list[dict[str, Any]],
+    formula_breakdown: list[dict[str, Any]],
+) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {
+        str(section.get("code") or ""): []
+        for section in sections
+    }
+    grouped.setdefault(DEFAULT_SERVICE_SECTION_CODE, [])
+    energy_item = {
+        "kind": "energy",
+        "name": "Energia electrica",
+        "alias": "energia_electrica",
+        "section": DEFAULT_SERVICE_SECTION_CODE,
+        "position": 0,
+        "configured_value": "Franjas por consumo",
+        "amount": round(energy_cost, 6),
+    }
+    grouped[DEFAULT_SERVICE_SECTION_CODE].append(energy_item)
+    for item in sorted(
+        fixed_breakdown,
+        key=lambda value: (int(value.get("position") or 0), str(value.get("name") or "")),
+    ):
+        grouped.setdefault(charge_section(item, default=DEFAULT_SERVICE_SECTION_CODE), []).append(item)
+    for item in sorted(
+        formula_breakdown,
+        key=lambda value: (int(value.get("position") or 0), str(value.get("name") or "")),
+    ):
+        grouped.setdefault(charge_section(item, default=DEFAULT_TAX_SECTION_CODE), []).append(item)
+
+    section_breakdowns: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for section in sections:
+        code = str(section.get("code") or "")
+        items = grouped.get(code, [])
+        if not items and not bool(section.get("is_system", False)):
+            continue
+        section_breakdowns.append(
+            (
+                section,
+                {
+                    "items": items,
+                    "total": round(sum(float(item.get("amount") or 0.0) for item in items), 6),
+                },
+            )
+        )
+    return section_breakdowns
 
 
 def build_service_breakdown(
@@ -607,7 +768,7 @@ def build_service_breakdown(
             "kind": "energy",
             "name": "Energia electrica",
             "alias": "energia_electrica",
-            "section": "service",
+            "section": DEFAULT_SERVICE_SECTION_CODE,
             "position": 0,
             "configured_value": "Franjas por consumo",
             "amount": round(energy_cost, 6),
@@ -616,12 +777,12 @@ def build_service_breakdown(
     items.extend(
         item
         for item in sorted(fixed_breakdown, key=lambda value: (int(value.get("position") or 0), str(value.get("name") or "")))
-        if charge_section(item, default="service") == "service"
+        if charge_section(item, default=DEFAULT_SERVICE_SECTION_CODE) == DEFAULT_SERVICE_SECTION_CODE
     )
     items.extend(
         item
         for item in sorted(formula_breakdown, key=lambda value: (int(value.get("position") or 0), str(value.get("name") or "")))
-        if charge_section(item, default="tax") == "service"
+        if charge_section(item, default=DEFAULT_TAX_SECTION_CODE) == DEFAULT_SERVICE_SECTION_CODE
     )
     return items
 
@@ -635,12 +796,12 @@ def build_other_concepts_breakdown(
     items.extend(
         item
         for item in sorted(fixed_breakdown, key=lambda value: (int(value.get("position") or 0), str(value.get("name") or "")))
-        if charge_section(item, default="service") == "tax"
+        if charge_section(item, default=DEFAULT_SERVICE_SECTION_CODE) == DEFAULT_TAX_SECTION_CODE
     )
     items.extend(
         item
         for item in sorted(formula_breakdown, key=lambda value: (int(value.get("position") or 0), str(value.get("name") or "")))
-        if charge_section(item, default="tax") == "tax"
+        if charge_section(item, default=DEFAULT_TAX_SECTION_CODE) == DEFAULT_TAX_SECTION_CODE
     )
     return items
 

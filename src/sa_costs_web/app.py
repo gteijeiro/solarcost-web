@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import logging
 import re
@@ -16,6 +17,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    has_request_context,
     redirect,
     render_template,
     request,
@@ -35,10 +37,22 @@ from .calculator import (
 )
 from .config import WebConfig
 from .db import CostsRepository
+from .i18n import (
+    DEFAULT_LANGUAGE,
+    get_language_options,
+    get_locale,
+    get_month_abbr,
+    normalize_language,
+    translate,
+)
+from .sections import (
+    DEFAULT_SERVICE_SECTION_CODE,
+    DEFAULT_TAX_SECTION_CODE,
+    get_system_section_name,
+    is_system_section_code,
+)
 
 REFERENCE_ALIAS_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-CHARGE_SECTIONS = {"service", "tax"}
-MONTH_ABBR_ES = ("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
 ROLE_LABELS = {"admin": "Administrador", "viewer": "Visualizador"}
 SERIES_COLORS = (
     ("#2563eb", "rgba(37, 99, 235, 0.18)"),
@@ -78,68 +92,122 @@ class ToggleChartData:
     config: dict[str, Any]
 
 
-def localize_number_text(text: str) -> str:
-    return text.replace(",", "X").replace(".", ",").replace("X", ".")
+def get_current_language() -> str:
+    if not has_request_context():
+        return DEFAULT_LANGUAGE
+
+    user = get_current_user()
+    if user is not None:
+        return normalize_language(user.get("language"))
+    return normalize_language(session.get("language"))
+
+
+def tr(text: str, **kwargs: Any) -> str:
+    return translate(get_current_language(), text, **kwargs)
+
+
+def role_label_text(role: str | None, language: str | None = None) -> str:
+    normalized_role = str(role or "").strip()
+    label = ROLE_LABELS.get(normalized_role, "Usuario")
+    return translate(language or get_current_language(), label)
+
+
+def section_label_text(section_code: str | None, fallback_name: str | None = None, language: str | None = None) -> str:
+    code = str(section_code or "").strip()
+    default_name = get_system_section_name(code)
+    name = default_name or str(fallback_name or code or "")
+    return translate(language or get_current_language(), name)
+
+
+def decorate_sections(sections: list[dict[str, Any]], language: str | None = None) -> list[dict[str, Any]]:
+    normalized_language = language or get_current_language()
+    decorated: list[dict[str, Any]] = []
+    for section in sections:
+        code = str(section.get("code") or "")
+        decorated.append(
+            {
+                **section,
+                "display_name": section_label_text(code, str(section.get("name") or ""), normalized_language),
+                "is_default_service": code == DEFAULT_SERVICE_SECTION_CODE,
+                "is_default_tax": code == DEFAULT_TAX_SECTION_CODE,
+                "is_system": bool(section.get("is_system", False) or is_system_section_code(code)),
+                "enabled": bool(section.get("enabled", True)),
+            }
+        )
+    return decorated
+
+
+def localize_number_text(text: str, language: str | None = None) -> str:
+    if normalize_language(language or get_current_language()) == "es":
+        return text.replace(",", "X").replace(".", ",").replace("X", ".")
+    return text
 
 
 def trim_decimal_text(text: str) -> str:
     return text.rstrip("0").rstrip(".")
 
 
-def format_money_value(value: Any) -> str:
+def format_money_value(value: Any, language: str | None = None) -> str:
     amount = float(value or 0.0)
-    return f"${localize_number_text(f'{amount:,.2f}')}"
+    return f"${localize_number_text(f'{amount:,.2f}', language)}"
 
 
-def format_kwh_value(value: Any) -> str:
+def format_kwh_value(value: Any, language: str | None = None) -> str:
     amount = float(value or 0.0)
-    return localize_number_text(trim_decimal_text(f"{amount:,.3f}"))
+    return localize_number_text(trim_decimal_text(f"{amount:,.3f}"), language)
 
 
-def format_percent_value(value: Any) -> str:
+def format_percent_value(value: Any, language: str | None = None) -> str:
     if value is None:
-        return "n/d"
+        return translate(language or get_current_language(), "n/d")
     amount = float(value)
-    return f"{localize_number_text(f'{amount:,.2f}')}%"
+    return f"{localize_number_text(f'{amount:,.2f}', language)}%"
 
 
-def format_chart_tick(value: float, kind: str) -> str:
+def format_chart_tick(value: float, kind: str, language: str | None = None) -> str:
     if kind == "money_rate":
-        return f"${localize_number_text(trim_decimal_text(f'{value:,.2f}'))}"
+        return f"${localize_number_text(trim_decimal_text(f'{value:,.2f}'), language)}"
     if abs(value) >= 1000:
-        compact = f"{localize_number_text(trim_decimal_text(f'{value / 1000:.1f}'))}k"
+        compact = f"{localize_number_text(trim_decimal_text(f'{value / 1000:.1f}'), language)}k"
     else:
-        compact = localize_number_text(trim_decimal_text(f"{value:.0f}"))
+        compact = localize_number_text(trim_decimal_text(f"{value:.0f}"), language)
     return f"${compact}" if kind == "money" else compact
 
 
-def format_period_axis_label(period: dict[str, Any]) -> str:
+def format_period_axis_label(period: dict[str, Any], language: str | None = None) -> str:
     raw_date = str(period.get("effective_start") or period.get("starts_on") or "")
     try:
         start_date = date.fromisoformat(raw_date)
     except ValueError:
         return raw_date
-    return f"{MONTH_ABBR_ES[start_date.month - 1]} {start_date.year}"
+    month_abbr = get_month_abbr(language or get_current_language())
+    return f"{month_abbr[start_date.month - 1]} {start_date.year}"
 
 
-def format_day_axis_label(raw_date: str) -> str:
+def format_day_axis_label(raw_date: str, language: str | None = None) -> str:
     try:
         parsed = date.fromisoformat(str(raw_date))
     except ValueError:
         return str(raw_date)
+    if normalize_language(language or get_current_language()) == "en":
+        return parsed.strftime("%m/%d")
     return parsed.strftime("%d/%m")
 
 
-def format_datetime_value(value: Any) -> str:
+def format_datetime_value(value: Any, language: str | None = None) -> str:
     text = str(value or "").strip()
     if not text:
-        return "sin datos"
+        return translate(language or get_current_language(), "sin datos")
     try:
         parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError:
         return text
     if parsed.tzinfo is not None:
         parsed = parsed.astimezone()
+    normalized_language = normalize_language(language or get_current_language())
+    if normalized_language == "en":
+        month_abbr = get_month_abbr(normalized_language)
+        return f"{month_abbr[parsed.month - 1]} {parsed.day:02d}, {parsed.year} {parsed.hour:02d}:{parsed.minute:02d}"
     return parsed.strftime("%d/%m/%Y %H:%M")
 
 
@@ -169,18 +237,33 @@ def create_app(config: WebConfig) -> Flask:
     @app.context_processor
     def inject_globals() -> dict[str, Any]:
         current_user = get_current_user()
+        current_language = get_current_language()
         return {
             "current_user": current_user,
             "can_manage": is_admin_user(current_user),
-            "role_label": ROLE_LABELS.get(str((current_user or {}).get("role") or ""), "Usuario"),
+            "role_label": role_label_text(str((current_user or {}).get("role") or ""), current_language),
             "has_users": get_repo().user_count() > 0,
             "bridge_url": get_web_config().bridge_url,
+            "current_language": current_language,
+            "current_locale": get_locale(current_language),
+            "language_options": get_language_options(),
+            "t": lambda text, **kwargs: translate(current_language, text, **kwargs),
+            "section_label": lambda code, fallback_name=None: section_label_text(code, fallback_name, current_language),
+            "money_text": lambda value: format_money_value(value, current_language),
+            "kwh_text": lambda value: format_kwh_value(value, current_language),
+            "ui_strings": {
+                "locale": get_locale(current_language),
+                "expand_menu": translate(current_language, "Expandir menu"),
+                "collapse_menu": translate(current_language, "Colapsar menu"),
+            },
         }
 
     def render_settings_page(*, import_preview: dict[str, Any] | None = None) -> str:
         repo = get_repo()
+        sections = decorate_sections(repo.list_sections())
         return render_template(
             "settings.html",
+            charge_sections=sections,
             template_bands=repo.list_tariff_bands(scope="default"),
             default_fixed=repo.list_charge_rules(scope="default", kind="fixed"),
             default_taxes=repo.list_charge_rules(scope="default", kind="tax"),
@@ -196,8 +279,10 @@ def create_app(config: WebConfig) -> Flask:
             return redirect(url_for("setup"))
         current_user = get_current_user()
         if current_user is not None and not bool(current_user.get("enabled", 1)):
+            language = get_current_language()
             session.clear()
-            flash("Tu usuario esta deshabilitado.", "error")
+            session["language"] = language
+            flash(translate(language, "Tu usuario esta deshabilitado."), "error")
             return redirect(url_for("login"))
         return None
 
@@ -210,21 +295,29 @@ def create_app(config: WebConfig) -> Flask:
             username = request.form.get("username", "").strip()
             password = request.form.get("password", "")
             password_confirm = request.form.get("password_confirm", "")
+            language = normalize_language(request.form.get("language"))
+            session["language"] = language
 
             if not username:
-                flash("El usuario es obligatorio.", "error")
+                flash(tr("El usuario es obligatorio."), "error")
             elif len(password) < 6:
-                flash("La contrasena debe tener al menos 6 caracteres.", "error")
+                flash(tr("La contrasena debe tener al menos 6 caracteres."), "error")
             elif password != password_confirm:
-                flash("Las contrasenas no coinciden.", "error")
+                flash(tr("Las contrasenas no coinciden."), "error")
             else:
                 try:
-                    user_id = get_repo().create_user(username, generate_password_hash(password), role="admin")
+                    user_id = get_repo().create_user(
+                        username,
+                        generate_password_hash(password),
+                        role="admin",
+                        language=language,
+                    )
                 except Exception as exc:  # noqa: BLE001
-                    flash(f"No se pudo crear el usuario: {exc}", "error")
+                    flash(tr("No se pudo crear el usuario: {error}", error=str(exc)), "error")
                 else:
                     session["user_id"] = user_id
-                    flash("Usuario administrador creado.", "success")
+                    session["language"] = language
+                    flash(tr("Usuario administrador creado."), "success")
                     return redirect(url_for("dashboard"))
 
         return render_template("setup.html")
@@ -241,18 +334,21 @@ def create_app(config: WebConfig) -> Flask:
             password = request.form.get("password", "")
             user = get_repo().get_user_by_username(username)
             if user is None or not bool(user.get("enabled", 1)) or not check_password_hash(user["password_hash"], password):
-                flash("Usuario o contrasena incorrectos.", "error")
+                flash(tr("Usuario o contrasena incorrectos."), "error")
             else:
                 session["user_id"] = user["id"]
-                flash("Sesion iniciada.", "success")
+                session["language"] = normalize_language(user.get("language"))
+                flash(tr("Sesion iniciada."), "success")
                 return redirect(url_for("dashboard"))
 
         return render_template("login.html")
 
     @app.route("/logout", methods=["POST"])
     def logout() -> Any:
+        language = get_current_language()
         session.clear()
-        flash("Sesion cerrada.", "success")
+        session["language"] = language
+        flash(translate(language, "Sesion cerrada."), "success")
         return redirect(url_for("login"))
 
     @app.route("/manifest.webmanifest")
@@ -305,6 +401,19 @@ def create_app(config: WebConfig) -> Flask:
             users=repo.list_users() if is_admin_user(get_current_user()) else [],
         )
 
+    @app.route("/account/language", methods=["POST"])
+    @login_required
+    def change_language() -> Any:
+        user = get_current_user()
+        if user is None:
+            return redirect(url_for("login"))
+
+        language = normalize_language(request.form.get("language"))
+        get_repo().update_user_language(int(user["id"]), language)
+        session["language"] = language
+        flash(translate(language, "Idioma actualizado."), "success")
+        return redirect(url_for("account"))
+
     @app.route("/account/password", methods=["POST"])
     @login_required
     def change_password() -> Any:
@@ -317,14 +426,14 @@ def create_app(config: WebConfig) -> Flask:
         confirm_password = request.form.get("confirm_password", "")
 
         if not check_password_hash(str(user["password_hash"]), current_password):
-            flash("La contrasena actual no es correcta.", "error")
+            flash(tr("La contrasena actual no es correcta."), "error")
         elif len(new_password) < 6:
-            flash("La nueva contrasena debe tener al menos 6 caracteres.", "error")
+            flash(tr("La nueva contrasena debe tener al menos 6 caracteres."), "error")
         elif new_password != confirm_password:
-            flash("Las nuevas contrasenas no coinciden.", "error")
+            flash(tr("Las nuevas contrasenas no coinciden."), "error")
         else:
             get_repo().update_user_password(int(user["id"]), generate_password_hash(new_password))
-            flash("Contrasena actualizada.", "success")
+            flash(tr("Contrasena actualizada."), "success")
         return redirect(url_for("account"))
 
     @app.route("/account/users/save", methods=["POST"])
@@ -334,22 +443,28 @@ def create_app(config: WebConfig) -> Flask:
         password = request.form.get("password", "")
         password_confirm = request.form.get("password_confirm", "")
         role = request.form.get("role", "").strip()
+        language = normalize_language(request.form.get("language") or get_current_language())
 
         if role not in ROLE_LABELS:
-            flash("Rol invalido.", "error")
+            flash(tr("Rol invalido."), "error")
         elif not username:
-            flash("El usuario es obligatorio.", "error")
+            flash(tr("El usuario es obligatorio."), "error")
         elif len(password) < 6:
-            flash("La contrasena debe tener al menos 6 caracteres.", "error")
+            flash(tr("La contrasena debe tener al menos 6 caracteres."), "error")
         elif password != password_confirm:
-            flash("Las contrasenas no coinciden.", "error")
+            flash(tr("Las contrasenas no coinciden."), "error")
         else:
             try:
-                get_repo().create_user(username, generate_password_hash(password), role=role)
+                get_repo().create_user(
+                    username,
+                    generate_password_hash(password),
+                    role=role,
+                    language=language,
+                )
             except Exception as exc:  # noqa: BLE001
-                flash(f"No se pudo crear el usuario: {exc}", "error")
+                flash(tr("No se pudo crear el usuario: {error}", error=str(exc)), "error")
             else:
-                flash("Usuario creado.", "success")
+                flash(tr("Usuario creado."), "success")
         return redirect(url_for("account"))
 
     @app.route("/account/users/<int:user_id>/toggle-enabled", methods=["POST"])
@@ -359,18 +474,18 @@ def create_app(config: WebConfig) -> Flask:
         if current_user is None:
             return redirect(url_for("login"))
         if int(current_user["id"]) == user_id:
-            flash("No puedes deshabilitar tu propio usuario.", "error")
+            flash(tr("No puedes deshabilitar tu propio usuario."), "error")
             return redirect(url_for("account"))
 
         target_user = get_repo().get_user_by_id(user_id)
         if target_user is None:
-            flash("Usuario inexistente.", "error")
+            flash(tr("Usuario inexistente."), "error")
             return redirect(url_for("account"))
 
         enabled = request.form.get("enabled") == "1"
         get_repo().update_user_enabled(user_id, enabled)
         flash(
-            "Usuario habilitado." if enabled else "Usuario deshabilitado.",
+            tr("Usuario habilitado." if enabled else "Usuario deshabilitado."),
             "success",
         )
         return redirect(url_for("account"))
@@ -379,6 +494,39 @@ def create_app(config: WebConfig) -> Flask:
     @admin_required
     def settings() -> Any:
         return render_settings_page()
+
+    @app.route("/settings/sections/save", methods=["POST"])
+    @admin_required
+    def save_section() -> Any:
+        repo = get_repo()
+        section_id = parse_optional_int(request.form.get("section_id"))
+        name = request.form.get("name", "").strip()
+        position = parse_int(request.form.get("position"), default=10)
+        enabled = request.form.get("enabled") == "on"
+
+        try:
+            repo.save_section(
+                section_id=section_id,
+                name=name,
+                position=position,
+                enabled=enabled,
+            )
+        except Exception as exc:  # noqa: BLE001
+            flash(tr("No se pudo guardar la seccion: {error}", error=str(exc)), "error")
+        else:
+            flash(tr("Seccion guardada."), "success")
+        return redirect(url_for("settings"))
+
+    @app.route("/settings/sections/<int:section_id>/delete", methods=["POST"])
+    @admin_required
+    def delete_section(section_id: int) -> Any:
+        try:
+            get_repo().delete_section(section_id)
+        except Exception as exc:  # noqa: BLE001
+            flash(tr("No se pudo eliminar la seccion: {error}", error=str(exc)), "error")
+        else:
+            flash(tr("Seccion eliminada."), "success")
+        return redirect(url_for("settings"))
 
     @app.route("/settings/export")
     @admin_required
@@ -398,20 +546,20 @@ def create_app(config: WebConfig) -> Flask:
     def preview_import_settings() -> Any:
         uploaded_file = request.files.get("config_file")
         if uploaded_file is None or not str(uploaded_file.filename or "").strip():
-            flash("Selecciona un archivo JSON para importar.", "error")
+            flash(tr("Selecciona un archivo JSON para importar."), "error")
             return redirect(url_for("settings"))
 
         try:
             payload = json.loads(uploaded_file.read().decode("utf-8"))
             prepared_payload = get_repo().prepare_configuration_import(payload)
         except UnicodeDecodeError:
-            flash("El archivo importado debe estar codificado en UTF-8.", "error")
+            flash(tr("El archivo importado debe estar codificado en UTF-8."), "error")
             return redirect(url_for("settings"))
         except json.JSONDecodeError as exc:
-            flash(f"El archivo JSON no es valido: {exc.msg}.", "error")
+            flash(tr("El archivo JSON no es valido: {message}.", message=exc.msg), "error")
             return redirect(url_for("settings"))
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo leer la configuracion importada: {exc}", "error")
+            flash(tr("No se pudo leer la configuracion importada: {error}", error=str(exc)), "error")
             return redirect(url_for("settings"))
 
         return render_settings_page(
@@ -423,22 +571,23 @@ def create_app(config: WebConfig) -> Flask:
     def apply_import_settings() -> Any:
         payload_json = str(request.form.get("payload_json") or "").strip()
         if not payload_json:
-            flash("La previsualizacion de importacion expiro. Vuelve a subir el archivo.", "error")
+            flash(tr("La previsualizacion de importacion expiro. Vuelve a subir el archivo."), "error")
             return redirect(url_for("settings"))
 
         try:
             payload = json.loads(payload_json)
             prepared_payload = get_repo().prepare_configuration_import(payload)
         except json.JSONDecodeError as exc:
-            flash(f"El archivo JSON no es valido: {exc.msg}.", "error")
+            flash(tr("El archivo JSON no es valido: {message}.", message=exc.msg), "error")
             return redirect(url_for("settings"))
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo validar la configuracion importada: {exc}", "error")
+            flash(tr("No se pudo validar la configuracion importada: {error}", error=str(exc)), "error")
             return redirect(url_for("settings"))
 
         include_default_bands = request.form.get("include_default_bands") == "on"
         include_default_fixed = request.form.get("include_default_fixed") == "on"
         include_default_taxes = request.form.get("include_default_taxes") == "on"
+        include_sections = request.form.get("include_sections") == "on"
         selected_period_starts_on = {
             str(value).strip()
             for value in request.form.getlist("selected_period_starts_on")
@@ -448,13 +597,14 @@ def create_app(config: WebConfig) -> Flask:
         try:
             result = get_repo().import_configuration(
                 prepared_payload,
+                include_sections=include_sections,
                 include_default_bands=include_default_bands,
                 include_default_fixed=include_default_fixed,
                 include_default_taxes=include_default_taxes,
                 selected_period_starts_on=selected_period_starts_on,
             )
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo importar la configuracion: {exc}", "error")
+            flash(tr("No se pudo importar la configuracion: {error}", error=str(exc)), "error")
             return render_settings_page(
                 import_preview=build_import_preview_data(prepared_payload),
             )
@@ -468,16 +618,16 @@ def create_app(config: WebConfig) -> Flask:
         try:
             handle_band_save(scope="default", billing_period_id=None)
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo guardar la franja: {exc}", "error")
+            flash(tr("No se pudo guardar la franja: {error}", error=str(exc)), "error")
         else:
-            flash("Franja guardada.", "success")
+            flash(tr("Franja guardada."), "success")
         return redirect(url_for("settings"))
 
     @app.route("/settings/bands/<int:band_id>/delete", methods=["POST"])
     @admin_required
     def delete_default_band(band_id: int) -> Any:
         get_repo().delete_tariff_band(band_id)
-        flash("Franja eliminada.", "success")
+        flash(tr("Franja eliminada."), "success")
         return redirect(url_for("settings"))
 
     @app.route("/settings/charges/save", methods=["POST"])
@@ -486,16 +636,16 @@ def create_app(config: WebConfig) -> Flask:
         try:
             handle_charge_save(scope="default", billing_period_id=None)
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo guardar la regla: {exc}", "error")
+            flash(tr("No se pudo guardar la regla: {error}", error=str(exc)), "error")
         else:
-            flash("Regla guardada.", "success")
+            flash(tr("Regla guardada."), "success")
         return redirect(url_for("settings"))
 
     @app.route("/settings/charges/<int:rule_id>/delete", methods=["POST"])
     @admin_required
     def delete_default_charge(rule_id: int) -> Any:
         get_repo().delete_charge_rule(rule_id)
-        flash("Regla eliminada.", "success")
+        flash(tr("Regla eliminada."), "success")
         return redirect(url_for("settings"))
 
     @app.route("/periods")
@@ -526,13 +676,13 @@ def create_app(config: WebConfig) -> Flask:
         requested_billing_source = request.form.get("billing_source")
 
         if not name:
-            flash("El nombre del periodo es obligatorio.", "error")
+            flash(tr("El nombre del periodo es obligatorio."), "error")
             return redirect(url_for("periods"))
         if not starts_on:
-            flash("La fecha de inicio es obligatoria.", "error")
+            flash(tr("La fecha de inicio es obligatoria."), "error")
             return redirect(url_for("periods"))
         if utility_measured_kwh is not None and utility_measured_kwh < 0:
-            flash("El consumo medido por la compania no puede ser negativo.", "error")
+            flash(tr("El consumo medido por la compania no puede ser negativo."), "error")
             if period_id is None:
                 return redirect(url_for("periods"))
             return redirect(url_for("period_detail", period_id=period_id))
@@ -555,14 +705,14 @@ def create_app(config: WebConfig) -> Flask:
             tariff_seed_result = ensure_period_tariff_bands(saved_id, starts_on) if period_id is None else None
             fixed_seed_result = ensure_period_fixed_charges(saved_id, starts_on) if period_id is None else None
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo guardar el periodo: {exc}", "error")
+            flash(tr("No se pudo guardar el periodo: {error}", error=str(exc)), "error")
             return redirect(url_for("periods"))
 
         if tariff_seed_result is not None:
             flash_tariff_seed_result(tariff_seed_result)
         if fixed_seed_result is not None:
             flash_fixed_charge_seed_result(fixed_seed_result)
-        flash("Periodo guardado.", "success")
+        flash(tr("Periodo guardado."), "success")
         return redirect(url_for("period_detail", period_id=saved_id))
 
     @app.route("/periods/<int:period_id>/billing-source", methods=["POST"])
@@ -578,12 +728,12 @@ def create_app(config: WebConfig) -> Flask:
             existing_period=period,
         )
         if billing_source == "utility" and utility_measured_kwh is None:
-            flash("No puedes usar la compania para calcular hasta cargar su lectura.", "error")
+            flash(tr("No puedes usar la compania para calcular hasta cargar su lectura."), "error")
             return redirect(url_for("period_detail", period_id=period_id))
 
         repo.update_billing_source(period_id, billing_source)
         flash(
-            "La fuente usada para calcular la factura fue actualizada.",
+            tr("La fuente usada para calcular la factura fue actualizada."),
             "success",
         )
         return redirect(url_for("period_detail", period_id=period_id))
@@ -592,7 +742,7 @@ def create_app(config: WebConfig) -> Flask:
     @admin_required
     def delete_period(period_id: int) -> Any:
         get_repo().delete_billing_period(period_id)
-        flash("Periodo eliminado.", "success")
+        flash(tr("Periodo eliminado."), "success")
         return redirect(url_for("periods"))
 
     @app.route("/periods/<int:period_id>")
@@ -627,6 +777,7 @@ def create_app(config: WebConfig) -> Flask:
             effective_bands=repo.get_effective_tariff_bands(period_id),
             effective_fixed=repo.get_effective_fixed_charges(period_id),
             effective_taxes=repo.get_effective_tax_rules(period_id),
+            charge_sections=decorate_sections(repo.list_sections()),
         )
 
     @app.route("/periods/<int:period_id>/bands/save", methods=["POST"])
@@ -636,9 +787,9 @@ def create_app(config: WebConfig) -> Flask:
         try:
             handle_band_save(scope="period", billing_period_id=period_id)
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo guardar la franja del periodo: {exc}", "error")
+            flash(tr("No se pudo guardar la franja del periodo: {error}", error=str(exc)), "error")
         else:
-            flash("Franja del periodo guardada.", "success")
+            flash(tr("Franja del periodo guardada."), "success")
         return redirect(url_for("period_detail", period_id=period_id))
 
     @app.route("/periods/<int:period_id>/bands/<int:band_id>/delete", methods=["POST"])
@@ -646,7 +797,7 @@ def create_app(config: WebConfig) -> Flask:
     def delete_period_band(period_id: int, band_id: int) -> Any:
         ensure_period_exists(period_id)
         get_repo().delete_tariff_band(band_id)
-        flash("Franja del periodo eliminada.", "success")
+        flash(tr("Franja del periodo eliminada."), "success")
         return redirect(url_for("period_detail", period_id=period_id))
 
     @app.route("/periods/<int:period_id>/bands/seed", methods=["POST"])
@@ -672,9 +823,9 @@ def create_app(config: WebConfig) -> Flask:
         try:
             handle_charge_save(scope="period", billing_period_id=period_id)
         except Exception as exc:  # noqa: BLE001
-            flash(f"No se pudo guardar la regla del periodo: {exc}", "error")
+            flash(tr("No se pudo guardar la regla del periodo: {error}", error=str(exc)), "error")
         else:
-            flash("Regla del periodo guardada.", "success")
+            flash(tr("Regla del periodo guardada."), "success")
         return redirect(url_for("period_detail", period_id=period_id))
 
     @app.route("/periods/<int:period_id>/charges/<int:rule_id>/delete", methods=["POST"])
@@ -682,7 +833,7 @@ def create_app(config: WebConfig) -> Flask:
     def delete_period_charge(period_id: int, rule_id: int) -> Any:
         ensure_period_exists(period_id)
         get_repo().delete_charge_rule(rule_id)
-        flash("Regla del periodo eliminada.", "success")
+        flash(tr("Regla del periodo eliminada."), "success")
         return redirect(url_for("period_detail", period_id=period_id))
 
     return app
@@ -705,7 +856,7 @@ def admin_required(view: Callable[..., Any]) -> Callable[..., Any]:
         if user is None:
             return redirect(url_for("login"))
         if not is_admin_user(user):
-            flash("Tu usuario solo tiene acceso de visualizacion.", "error")
+            flash(tr("Tu usuario solo tiene acceso de visualizacion."), "error")
             return redirect(url_for("dashboard"))
         return view(*args, **kwargs)
 
@@ -807,44 +958,58 @@ def ensure_period_fixed_charges(period_id: int, starts_on: str) -> SeedResult:
 
 def flash_tariff_seed_result(result: SeedResult) -> None:
     if result.source == "existing":
-        flash("Este periodo ya tiene sus propios precios por franja.", "success")
+        flash(tr("Este periodo ya tiene sus propios precios por franja."), "success")
         return
     if result.source == "previous":
         flash(
-            f"Se copiaron {result.copied_count} franjas desde {result.source_period_name}.",
+            tr(
+                "Se copiaron {count} franjas desde {source_period_name}.",
+                count=result.copied_count,
+                source_period_name=result.source_period_name,
+            ),
             "success",
         )
         return
     if result.source == "template":
         flash(
-            f"Se copiaron {result.copied_count} franjas desde la plantilla de tarifas.",
+            tr(
+                "Se copiaron {count} franjas desde la plantilla de tarifas.",
+                count=result.copied_count,
+            ),
             "success",
         )
         return
     flash(
-        "El periodo se guardo, pero no hay una plantilla ni otro mes con tarifas para copiar.",
+        tr("El periodo se guardo, pero no hay una plantilla ni otro mes con tarifas para copiar."),
         "error",
     )
 
 
 def flash_fixed_charge_seed_result(result: SeedResult) -> None:
     if result.source == "existing":
-        flash("Este periodo ya tiene sus propios cargos fijos.", "success")
+        flash(tr("Este periodo ya tiene sus propios cargos fijos."), "success")
         return
     if result.source == "previous":
         flash(
-            f"Se copiaron {result.copied_count} cargos fijos desde {result.source_period_name}.",
+            tr(
+                "Se copiaron {count} cargos fijos desde {source_period_name}.",
+                count=result.copied_count,
+                source_period_name=result.source_period_name,
+            ),
             "success",
         )
         return
     if result.source == "template":
         flash(
-            f"Se copiaron {result.copied_count} cargos fijos desde la plantilla base.",
+            tr(
+                "Se copiaron {count} cargos fijos desde la plantilla base.",
+                count=result.copied_count,
+            ),
             "success",
         )
         return
     flash(
-        "El periodo se guardo, pero no hay una plantilla ni otro mes con cargos fijos para copiar.",
+        tr("El periodo se guardo, pero no hay una plantilla ni otro mes con cargos fijos para copiar."),
         "error",
     )
 
@@ -853,6 +1018,7 @@ def build_import_preview_data(prepared_payload: dict[str, Any]) -> dict[str, Any
     data = prepared_payload.get("data") if isinstance(prepared_payload, dict) else {}
     defaults = data.get("defaults") if isinstance(data, dict) else {}
     periods = data.get("periods") if isinstance(data, dict) else []
+    sections = data.get("sections") if isinstance(data, dict) else []
     local_periods = get_repo().list_billing_periods(ascending=True)
     existing_starts_on = {str(period.get("starts_on") or "") for period in local_periods}
 
@@ -860,6 +1026,13 @@ def build_import_preview_data(prepared_payload: dict[str, Any]) -> dict[str, Any
         "exported_at": str(prepared_payload.get("exported_at") or ""),
         "payload_json": json.dumps(prepared_payload, ensure_ascii=False),
         "sections": [
+            {
+                "field": "include_sections",
+                "title": "Secciones de costo",
+                "description": "Crea o actualiza las secciones disponibles para agrupar conceptos y controlar si participan del calculo.",
+                "count": len(sections or []),
+                "checked": bool(sections),
+            },
             {
                 "field": "include_default_bands",
                 "title": "Plantilla de tarifa por consumo",
@@ -901,25 +1074,116 @@ def build_import_preview_data(prepared_payload: dict[str, Any]) -> dict[str, Any
 
 def build_import_result_message(result: dict[str, int]) -> str:
     parts: list[str] = []
+    if result.get("sections_upserted"):
+        parts.append(tr("{count} secciones actualizadas", count=result["sections_upserted"]))
     if result.get("default_bands_replaced"):
-        parts.append("plantilla de tarifas actualizada")
+        parts.append(tr("plantilla de tarifas actualizada"))
     if result.get("default_fixed_replaced"):
-        parts.append("plantilla de cargos fijos actualizada")
+        parts.append(tr("plantilla de cargos fijos actualizada"))
     if result.get("default_taxes_replaced"):
-        parts.append("conceptos calculados actualizados")
+        parts.append(tr("conceptos calculados actualizados"))
     if result.get("periods_created"):
-        parts.append(f"{result['periods_created']} periodos creados")
+        parts.append(tr("{count} periodos creados", count=result["periods_created"]))
     if result.get("periods_updated"):
-        parts.append(f"{result['periods_updated']} periodos actualizados")
+        parts.append(tr("{count} periodos actualizados", count=result["periods_updated"]))
     if not parts:
-        return "No se selecciono ningun elemento para importar."
-    return "Importacion aplicada: " + ", ".join(parts) + "."
+        return tr("No se selecciono ningun elemento para importar.")
+    return tr("Importacion aplicada: {items}.", items=", ".join(parts))
+
+
+def localize_summary_data(summary: dict[str, Any], language: str) -> dict[str, Any]:
+    localized = deepcopy(summary)
+
+    def localize_breakdown_item(item: dict[str, Any]) -> None:
+        if item.get("name"):
+            item["name"] = translate(language, str(item["name"]))
+        configured_value = item.get("configured_value")
+        if isinstance(configured_value, str) and configured_value.strip():
+            item["configured_value"] = translate(language, configured_value)
+
+    for variant_key in ("selected_variant", "load_variant", "alternate_variant"):
+        variant = localized.get(variant_key)
+        if isinstance(variant, dict) and variant.get("label"):
+            variant["label"] = translate(language, str(variant["label"]))
+
+    billing_variants = localized.get("billing_variants")
+    if isinstance(billing_variants, dict):
+        for variant in billing_variants.values():
+            if isinstance(variant, dict) and variant.get("label"):
+                variant["label"] = translate(language, str(variant["label"]))
+
+    config_source = localized.get("config_source")
+    if isinstance(config_source, dict):
+        for key, value in list(config_source.items()):
+            config_source[key] = translate(language, str(value))
+
+    if "daily_cost_note" in localized:
+        localized["daily_cost_note"] = translate(language, str(localized.get("daily_cost_note") or ""))
+
+    localized["inverter_issue_summary"] = build_inverter_issue_summary_text(
+        localized,
+        language,
+    )
+
+    for item in localized.get("energy_breakdown", []):
+        item["label"] = localize_band_label(item, language)
+
+    for group_key in ("service_breakdown", "other_concepts_breakdown", "fixed_breakdown", "formula_breakdown", "tax_breakdown"):
+        for item in localized.get(group_key, []):
+            localize_breakdown_item(item)
+
+    for section in localized.get("section_breakdowns", []):
+        if not isinstance(section, dict):
+            continue
+        section["display_name"] = section_label_text(
+            str(section.get("code") or ""),
+            str(section.get("name") or ""),
+            language,
+        )
+        for item in section.get("items", []):
+            if isinstance(item, dict):
+                localize_breakdown_item(item)
+
+    return localized
+
+
+def build_inverter_issue_summary_text(summary: dict[str, Any], language: str) -> str:
+    issue_parts: list[str] = []
+    if summary.get("has_manual_inverter_data_issue"):
+        issue_parts.append(translate(language, "Marcado manualmente"))
+    if summary.get("has_missing_days"):
+        missing_day_count = int(summary.get("missing_day_count") or 0)
+        day_label = translate(language, "dia" if missing_day_count == 1 else "dias")
+        issue_parts.append(
+            translate(
+                language,
+                "Faltan {count} dias sin medicion" if missing_day_count != 1 else "Falta 1 dia sin medicion",
+                count=missing_day_count,
+                day_label=day_label,
+            )
+        )
+    if issue_parts:
+        return " | ".join(issue_parts)
+    return translate(language, "Cobertura completa")
+
+
+def localize_band_label(item: dict[str, Any], language: str) -> str:
+    label = str(item.get("label") or "").strip()
+    from_kwh = float(item.get("from_kwh") or 0.0)
+    to_kwh = item.get("to_kwh")
+
+    if label == f"Desde {from_kwh:g} kWh":
+        return translate(language, "Desde {value} kWh", value=f"{from_kwh:g}")
+    if to_kwh is not None and label == f"{from_kwh:g} a {float(to_kwh):g} kWh":
+        return translate(language, "{start} a {end} kWh", start=f"{from_kwh:g}", end=f"{float(to_kwh):g}")
+    return label
 
 
 def build_dashboard_data(periods: list[dict[str, Any]]) -> DashboardData:
     bridge_data: BridgeData | None = None
     bridge_error: str | None = None
     summaries: list[dict[str, Any]] = []
+    language = get_current_language()
 
     if not periods:
         return DashboardData(bridge_data=None, bridge_error=None, summaries=[])
@@ -933,16 +1197,17 @@ def build_dashboard_data(periods: list[dict[str, Any]]) -> DashboardData:
 
     ranges = build_period_ranges(periods)
     repo = get_repo()
+    sections = repo.list_sections()
     for period in ranges:
-        summaries.append(
-            calculate_period_summary(
-                period,
-                bridge_data.points,
-                tariff_bands=repo.get_effective_tariff_bands(period["id"]),
-                fixed_charges=repo.get_effective_fixed_charges(period["id"]),
-                tax_rules=repo.get_effective_tax_rules(period["id"]),
-            )
+        summary = calculate_period_summary(
+            period,
+            bridge_data.points,
+            sections=sections,
+            tariff_bands=repo.get_effective_tariff_bands(period["id"]),
+            fixed_charges=repo.get_effective_fixed_charges(period["id"]),
+            tax_rules=repo.get_effective_tax_rules(period["id"]),
         )
+        summaries.append(localize_summary_data(summary, language))
 
     return DashboardData(bridge_data=bridge_data, bridge_error=bridge_error, summaries=summaries)
 
@@ -952,6 +1217,7 @@ def build_consumption_comparison_data(summaries: list[dict[str, Any]]) -> Consum
         return ConsumptionComparisonData(max_kwh=0.0, items=[])
 
     ordered = sorted(summaries, key=lambda item: item["period"]["effective_start"])
+    language = get_current_language()
     max_kwh = max(
         max(
             float(summary.get("inverter_consumption_kwh") or 0.0),
@@ -974,9 +1240,9 @@ def build_consumption_comparison_data(summaries: list[dict[str, Any]]) -> Consum
             {
                 "period_id": summary["period"]["id"],
                 "name": summary["period"]["name"],
-                "axis_label": format_period_axis_label(summary["period"]),
+                "axis_label": format_period_axis_label(summary["period"], language),
                 "full_label": (
-                    f"{summary['period']['name']} ({summary['period']['effective_start']} a {summary['period']['effective_end']})"
+                    f"{summary['period']['name']} ({summary['period']['effective_start']} - {summary['period']['effective_end']})"
                 ),
                 "inverter_kwh": inverter_kwh,
                 "utility_kwh": utility_kwh,
@@ -1017,10 +1283,14 @@ def build_period_consumption_comparison(summary: dict[str, Any] | None) -> dict[
 def build_consumption_chart(comparison_data: ConsumptionComparisonData) -> ToggleChartData | None:
     if not comparison_data.items:
         return None
+    language = get_current_language()
 
     return build_toggle_chart(
-        title="Consumo por periodo",
-        subtitle="Compara red, compania, consumo total load y generacion solar PV en cada periodo.",
+        title=translate(language, "Consumo por periodo"),
+        subtitle=translate(
+            language,
+            "Compara red, compania, consumo total load y generacion solar PV en cada periodo.",
+        ),
         labels=[str(item["axis_label"]) for item in comparison_data.items],
         full_labels=[str(item["full_label"]) for item in comparison_data.items],
         datasets=[
@@ -1031,13 +1301,13 @@ def build_consumption_chart(comparison_data: ConsumptionComparisonData) -> Toggl
                 "values": [float(item["load_kwh"]) for item in comparison_data.items],
             },
             {
-                "label": "Red",
+                "label": translate(language, "Red"),
                 "color": "#ef4444",
                 "fill": "rgba(239, 68, 68, 0.18)",
                 "values": [float(item["inverter_kwh"]) for item in comparison_data.items],
             },
             {
-                "label": "Compania",
+                "label": translate(language, "Compania"),
                 "color": "#14b8a6",
                 "fill": "rgba(20, 184, 166, 0.18)",
                 "values": [item["utility_kwh"] for item in comparison_data.items],
@@ -1060,15 +1330,19 @@ def build_period_daily_cost_chart(summary: dict[str, Any] | None) -> ToggleChart
     rows = summary.get("daily_energy_cost_breakdown") or []
     if not rows:
         return None
+    language = get_current_language()
 
     return build_toggle_chart(
-        title="Costo diario de energia",
-        subtitle=str(summary.get("daily_cost_note") or "Visualiza el costo diario calculado de la energia."),
-        labels=[format_day_axis_label(str(item["date"])) for item in rows],
+        title=translate(language, "Costo diario de energia"),
+        subtitle=str(
+            summary.get("daily_cost_note")
+            or translate(language, "Visualiza el costo diario calculado de la energia.")
+        ),
+        labels=[format_day_axis_label(str(item["date"]), language) for item in rows],
         full_labels=[str(item["date"]) for item in rows],
         datasets=[
             {
-                "label": "Costo energia",
+                "label": translate(language, "Costo energia"),
                 "color": "#16a34a",
                 "fill": "rgba(22, 163, 74, 0.18)",
                 "values": [float(item.get("energy_cost") or 0.0) for item in rows],
@@ -1085,15 +1359,19 @@ def build_period_daily_energy_chart(summary: dict[str, Any] | None) -> ToggleCha
     rows = summary.get("daily_energy_cost_breakdown") or []
     if not rows:
         return None
+    language = get_current_language()
 
     return build_toggle_chart(
-        title="Red y Solar PV por dia",
-        subtitle="Compara el consumo diario de red del inversor y la generacion solar del periodo.",
-        labels=[format_day_axis_label(str(item["date"])) for item in rows],
+        title=translate(language, "Red y Solar PV por dia"),
+        subtitle=translate(
+            language,
+            "Compara el consumo diario de red del inversor y la generacion solar del periodo.",
+        ),
+        labels=[format_day_axis_label(str(item["date"]), language) for item in rows],
         full_labels=[str(item["date"]) for item in rows],
         datasets=[
             {
-                "label": "Red inversor",
+                "label": translate(language, "Red inversor"),
                 "color": "#ef4444",
                 "fill": "rgba(239, 68, 68, 0.18)",
                 "values": [float(item.get("inverter_grid_kwh") or 0.0) for item in rows],
@@ -1114,29 +1392,33 @@ def build_costs_chart(summaries: list[dict[str, Any]]) -> ToggleChartData | None
         return None
 
     ordered = sorted(summaries, key=lambda item: item["period"]["effective_start"])
+    language = get_current_language()
     return build_toggle_chart(
-        title="Costos por periodo",
-        subtitle="Visualiza energia electrica, total del servicio y total final de la factura.",
-        labels=[format_period_axis_label(summary["period"]) for summary in ordered],
+        title=translate(language, "Costos por periodo"),
+        subtitle=translate(
+            language,
+            "Visualiza energia electrica, total del servicio y total final de la factura.",
+        ),
+        labels=[format_period_axis_label(summary["period"], language) for summary in ordered],
         full_labels=[
-            f"{summary['period']['name']} ({summary['period']['effective_start']} a {summary['period']['effective_end']})"
+            f"{summary['period']['name']} ({summary['period']['effective_start']} - {summary['period']['effective_end']})"
             for summary in ordered
         ],
         datasets=[
             {
-                "label": "Total factura",
+                "label": translate(language, "Total factura"),
                 "color": "#2563eb",
                 "fill": "rgba(37, 99, 235, 0.18)",
                 "values": [float(summary.get("total") or 0.0) for summary in ordered],
             },
             {
-                "label": "Total servicio",
+                "label": translate(language, "Total servicio"),
                 "color": "#facc15",
                 "fill": "rgba(250, 204, 21, 0.18)",
                 "values": [float(summary.get("service_total") or 0.0) for summary in ordered],
             },
             {
-                "label": "Energia electrica",
+                "label": translate(language, "Energia electrica"),
                 "color": "#ef4444",
                 "fill": "rgba(239, 68, 68, 0.18)",
                 "values": [float(summary.get("energy_cost") or 0.0) for summary in ordered],
@@ -1151,6 +1433,7 @@ def build_tariff_price_chart(summaries: list[dict[str, Any]]) -> ToggleChartData
         return None
 
     ordered = sorted(summaries, key=lambda item: item["period"]["effective_start"])
+    language = get_current_language()
     band_catalog: dict[str, dict[str, Any]] = {}
     for summary in ordered:
         for item in summary.get("energy_breakdown", []):
@@ -1159,7 +1442,7 @@ def build_tariff_price_chart(summaries: list[dict[str, Any]]) -> ToggleChartData
                 key,
                 {
                     "key": key,
-                    "label": str(item.get("label") or "Franja"),
+                    "label": str(item.get("label") or translate(language, "Franja")),
                     "order": (
                         float(item.get("from_kwh") or 0.0),
                         float(item["to_kwh"]) if item.get("to_kwh") is not None else float("inf"),
@@ -1194,11 +1477,14 @@ def build_tariff_price_chart(summaries: list[dict[str, Any]]) -> ToggleChartData
         )
 
     return build_toggle_chart(
-        title="Precio por franja",
-        subtitle="Sigue el valor del kWh configurado en cada tramo de consumo para cada periodo.",
-        labels=[format_period_axis_label(summary["period"]) for summary in ordered],
+        title=translate(language, "Precio por franja"),
+        subtitle=translate(
+            language,
+            "Sigue el valor del kWh configurado en cada tramo de consumo para cada periodo.",
+        ),
+        labels=[format_period_axis_label(summary["period"], language) for summary in ordered],
         full_labels=[
-            f"{summary['period']['name']} ({summary['period']['effective_start']} a {summary['period']['effective_end']})"
+            f"{summary['period']['name']} ({summary['period']['effective_start']} - {summary['period']['effective_end']})"
             for summary in ordered
         ],
         datasets=datasets,
@@ -1212,6 +1498,7 @@ def build_fixed_charge_chart(summaries: list[dict[str, Any]]) -> ToggleChartData
         return None
 
     ordered = sorted(summaries, key=lambda item: item["period"]["effective_start"])
+    language = get_current_language()
     charge_catalog: dict[str, dict[str, Any]] = {}
     for summary in ordered:
         for item in summary.get("fixed_breakdown", []):
@@ -1258,11 +1545,14 @@ def build_fixed_charge_chart(summaries: list[dict[str, Any]]) -> ToggleChartData
         )
 
     return build_toggle_chart(
-        title="Cargos fijos visibles",
-        subtitle="Muestra los importes fijos marcados para comparar en el dashboard.",
-        labels=[format_period_axis_label(summary["period"]) for summary in ordered],
+        title=translate(language, "Cargos fijos visibles"),
+        subtitle=translate(
+            language,
+            "Muestra los importes fijos marcados para comparar en el dashboard.",
+        ),
+        labels=[format_period_axis_label(summary["period"], language) for summary in ordered],
         full_labels=[
-            f"{summary['period']['name']} ({summary['period']['effective_start']} a {summary['period']['effective_end']})"
+            f"{summary['period']['name']} ({summary['period']['effective_start']} - {summary['period']['effective_end']})"
             for summary in ordered
         ],
         datasets=datasets,
@@ -1411,6 +1701,7 @@ def render_bar_chart_svg(
     max_value: float,
     value_kind: str,
 ) -> Markup:
+    language = get_current_language()
     width = 1100
     height = 600
     left = 72
@@ -1438,7 +1729,7 @@ def render_bar_chart_svg(
             f'<line x1="{left}" y1="{y:.2f}" x2="{width - right}" y2="{y:.2f}" stroke="rgba(31,42,46,0.10)" stroke-width="1" />'
         )
         y_axis_markup.append(
-            f'<text x="{left - 12}" y="{y + 4:.2f}" text-anchor="end" fill="#59676b" font-size="11">{escape(format_chart_tick(value, value_kind))}</text>'
+            f'<text x="{left - 12}" y="{y + 4:.2f}" text-anchor="end" fill="#59676b" font-size="11">{escape(format_chart_tick(value, value_kind, language))}</text>'
         )
 
     x_axis_markup: list[str] = []
@@ -1465,7 +1756,7 @@ def render_bar_chart_svg(
             )
 
     svg = (
-        f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="{escape("Grafico de barras")}">'
+        f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="{escape(translate(language, "Grafico de barras"))}">'
         f'<rect x="0" y="0" width="{width}" height="{height}" rx="22" fill="#ffffff" />'
         f'{"".join(y_axis_markup)}'
         f'<line x1="{left}" y1="{baseline_y:.2f}" x2="{width - right}" y2="{baseline_y:.2f}" stroke="rgba(31,42,46,0.16)" stroke-width="1.5" />'
@@ -1485,6 +1776,7 @@ def render_area_chart_svg(
     max_value: float,
     value_kind: str,
 ) -> Markup:
+    language = get_current_language()
     width = 1100
     height = 600
     left = 72
@@ -1506,7 +1798,7 @@ def render_area_chart_svg(
             f'<line x1="{left}" y1="{y:.2f}" x2="{width - right}" y2="{y:.2f}" stroke="rgba(255,255,255,0.10)" stroke-width="1" />'
         )
         grid_markup.append(
-            f'<text x="{left - 12}" y="{y + 4:.2f}" text-anchor="end" fill="rgba(255,255,255,0.72)" font-size="11">{escape(format_chart_tick(value, value_kind))}</text>'
+            f'<text x="{left - 12}" y="{y + 4:.2f}" text-anchor="end" fill="rgba(255,255,255,0.72)" font-size="11">{escape(format_chart_tick(value, value_kind, language))}</text>'
         )
 
     x_axis_markup: list[str] = []
@@ -1554,7 +1846,7 @@ def render_area_chart_svg(
                 )
 
     svg = (
-        f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="{escape("Grafico de area")}">'
+        f'<svg viewBox="0 0 {width} {height}" role="img" aria-label="{escape(translate(language, "Grafico de area"))}">'
         f'<rect x="0" y="0" width="{width}" height="{height}" rx="22" fill="#1d1f22" />'
         f'{"".join(grid_markup)}'
         f'<line x1="{left}" y1="{baseline_y:.2f}" x2="{width - right}" y2="{baseline_y:.2f}" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" />'
@@ -1623,11 +1915,12 @@ def build_area_path(segment: list[tuple[float, float, float, int]], baseline_y: 
 
 
 def format_chart_detail_value(value: float, value_kind: str) -> str:
+    language = get_current_language()
     if value_kind == "money":
-        return format_money_value(value)
+        return format_money_value(value, language)
     if value_kind == "money_rate":
-        return f"{format_money_value(value)}/kWh"
-    return f"{format_kwh_value(value)} kWh"
+        return f"{format_money_value(value, language)}/kWh"
+    return f"{format_kwh_value(value, language)} kWh"
 
 
 def handle_band_save(*, scope: str, billing_period_id: int | None) -> None:
@@ -1640,7 +1933,7 @@ def handle_band_save(*, scope: str, billing_period_id: int | None) -> None:
     price_per_kwh = parse_float(request.form.get("price_per_kwh"), default=0.0)
 
     if to_kwh is not None and to_kwh <= from_kwh:
-        raise ValueError("El valor hasta kWh debe ser mayor que desde kWh.")
+        raise ValueError(tr("El valor hasta kWh debe ser mayor que desde kWh."))
 
     repo.save_tariff_band(
         band_id=band_id,
@@ -1666,22 +1959,22 @@ def handle_charge_save(*, scope: str, billing_period_id: int | None) -> None:
     show_on_dashboard = request.form.get("show_on_dashboard") == "on"
 
     if kind not in {"tax", "fixed"}:
-        raise ValueError("Tipo de regla invalido.")
-    if section not in CHARGE_SECTIONS:
-        raise ValueError("Seccion invalida.")
+        raise ValueError(tr("Tipo de regla invalido."))
+    if repo.get_section_by_code(section) is None:
+        raise ValueError(tr("Seccion invalida."))
     if not name:
-        raise ValueError("El nombre es obligatorio.")
+        raise ValueError(tr("El nombre es obligatorio."))
     if alias and not REFERENCE_ALIAS_RE.fullmatch(alias):
-        raise ValueError("El alias solo puede tener letras, numeros y guion bajo, y debe empezar con una letra o _.")
+        raise ValueError(tr("El alias solo puede tener letras, numeros y guion bajo, y debe empezar con una letra o _."))
     if alias and normalize_reference_key(alias) in set(VARIABLE_ALIASES.values()):
-        raise ValueError("Ese alias esta reservado por el sistema. Usa otro nombre.")
+        raise ValueError(tr("Ese alias esta reservado por el sistema. Usa otro nombre."))
 
     if kind == "tax":
         expression = request.form.get("expression", "").strip()
         amount = None
         show_on_dashboard = False
         if not expression:
-            raise ValueError("La expresion del impuesto es obligatoria.")
+            raise ValueError(tr("La expresion del impuesto es obligatoria."))
     else:
         expression = None
         amount = parse_float(request.form.get("amount"), default=0.0)

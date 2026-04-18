@@ -1,14 +1,21 @@
 (function () {
-  var deferredInstallPrompt = null;
+  var ui = window.solarCostUi || {};
   var nav = document.querySelector("[data-nav]");
   var navToggle = document.querySelector("[data-nav-toggle]");
   var navBackdrop = document.querySelector("[data-nav-backdrop]");
-  var installButton = document.querySelector("[data-install-button]");
   var sidebarCollapseButton = document.querySelector("[data-sidebar-collapse]");
   var compactNavQuery = window.matchMedia("(max-width: 1080px)");
   var sidebarCollapsedKey = "sa-costs-sidebar-collapsed";
   var chartMode = "area";
   var chartEntries = [];
+
+  function getLocale() {
+    return ui.locale || document.documentElement.getAttribute("lang") || "es-AR";
+  }
+
+  function getUiText(key, fallback) {
+    return ui[key] || fallback;
+  }
 
   function isCompactNav() {
     return compactNavQuery.matches;
@@ -49,8 +56,8 @@
     }
     document.body.classList.toggle("sidebar-collapsed", collapsed);
     if (sidebarCollapseButton) {
-      sidebarCollapseButton.setAttribute("aria-label", collapsed ? "Expandir menu" : "Colapsar menu");
-      sidebarCollapseButton.setAttribute("title", collapsed ? "Expandir menu" : "Colapsar menu");
+      sidebarCollapseButton.setAttribute("aria-label", collapsed ? getUiText("expand_menu", "Expandir menu") : getUiText("collapse_menu", "Colapsar menu"));
+      sidebarCollapseButton.setAttribute("title", collapsed ? getUiText("expand_menu", "Expandir menu") : getUiText("collapse_menu", "Colapsar menu"));
       sidebarCollapseButton.setAttribute("aria-expanded", collapsed ? "false" : "true");
     }
     window.localStorage.setItem(sidebarCollapsedKey, collapsed ? "1" : "0");
@@ -65,10 +72,16 @@
   }
 
   function formatNumber(value, decimals) {
-    return Number(value || 0).toLocaleString("es-AR", {
+    return Number(value || 0).toLocaleString(getLocale(), {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     });
+  }
+
+  function trimTrailingZeros(text) {
+    return String(text)
+      .replace(/([.,]\d*?[1-9])0+$/, "$1")
+      .replace(/[.,]0+$/, "");
   }
 
   function formatValue(value, kind) {
@@ -78,7 +91,7 @@
     if (kind === "money_rate") {
       return "$" + formatNumber(value, 2) + "/kWh";
     }
-    return formatNumber(value, 3).replace(/,?0+$/, "").replace(/\.$/, "") + " kWh";
+    return trimTrailingZeros(formatNumber(value, 3)) + " kWh";
   }
 
   function formatAxisTick(value, kind) {
@@ -87,7 +100,7 @@
     }
 
     if (Math.abs(value) >= 1000) {
-      var compact = formatNumber(value / 1000, 1).replace(/,?0+$/, "").replace(/\.$/, "") + "k";
+      var compact = trimTrailingZeros(formatNumber(value / 1000, 1)) + "k";
       return kind === "money" ? "$" + compact : compact;
     }
 
@@ -348,34 +361,6 @@
 
   syncNavState();
   restoreSidebarCollapsedPreference();
-
-  window.addEventListener("beforeinstallprompt", function (event) {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    if (installButton) {
-      installButton.hidden = false;
-    }
-  });
-
-  window.addEventListener("appinstalled", function () {
-    deferredInstallPrompt = null;
-    if (installButton) {
-      installButton.hidden = true;
-    }
-  });
-
-  if (installButton) {
-    installButton.addEventListener("click", async function () {
-      if (!deferredInstallPrompt) {
-        return;
-      }
-      deferredInstallPrompt.prompt();
-      await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
-      installButton.hidden = true;
-      setNavOpen(false);
-    });
-  }
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {

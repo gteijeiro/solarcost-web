@@ -1,26 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Periodos{% endblock %}
+{% block title %}{{ t('Periodos') }}{% endblock %}
 {% block content %}
   <section class="header-grid">
     <article class="hero-card">
-      <p class="eyebrow">Facturacion</p>
-      <h2>Periodos abiertos por fecha de inicio</h2>
-      <p>
-        Cada periodo solo necesita fecha de inicio. El fin se calcula automaticamente con el inicio del
-        siguiente periodo o con la fecha de hoy si sigue abierto.
-      </p>
-      <p>
-        Al crear un periodo nuevo, se copian automaticamente las franjas del ultimo mes que ya tenga precios
-        propios. Si todavia no existe uno, se usa la plantilla de configuracion. Lo mismo aplica para los cargos fijos.
-      </p>
-      <p>
-        Si cargas el consumo medido por la compania, ese valor se usa como consumo facturable del mes y se compara
-        contra lo medido por el inversor.
-      </p>
+      <p class="eyebrow">{{ t('Facturacion') }}</p>
+      <h2>{{ t('Periodos abiertos por fecha de inicio') }}</h2>
+      <p>{{ t('Cada periodo solo necesita fecha de inicio. El fin se calcula automaticamente con el inicio del siguiente periodo o con la fecha de hoy si sigue abierto.') }}</p>
+      <p>{{ t('Al crear un periodo nuevo, se copian automaticamente las franjas del ultimo mes que ya tenga precios propios. Si todavia no existe uno, se usa la plantilla de configuracion. Lo mismo aplica para los cargos fijos.') }}</p>
+      <p>{{ t('Si cargas el consumo medido por la compania, ese valor se usa como consumo facturable del mes y se compara contra lo medido por el inversor.') }}</p>
     </article>
     <article class="panel helper-card">
-      <h3>Como funciona</h3>
-      <p>Si la distribuidora mide el 19 o el 20, creas un nuevo periodo cuando llega la factura y el anterior se cierra solo.</p>
+      <h3>{{ t('Como funciona') }}</h3>
+      <p>{{ t('Si la distribuidora mide el 19 o el 20, creas un nuevo periodo cuando llega la factura y el anterior se cierra solo.') }}</p>
     </article>
   </section>
 
@@ -28,42 +19,42 @@
     <article class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Alta o edicion</p>
-          <h2>Guardar periodo</h2>
+          <p class="eyebrow">{{ t('Alta o edicion') }}</p>
+          <h2>{{ t('Guardar periodo') }}</h2>
         </div>
       </div>
       <form method="post" action="{{ url_for('save_period') }}" class="stack-form">
         <input type="hidden" name="period_id" value="">
         <label>
-          Nombre
-          <input type="text" name="name" placeholder="Factura marzo 2026" required>
+          {{ t('Nombre') }}
+          <input type="text" name="name" placeholder="{{ t('Factura marzo 2026') }}" required>
         </label>
         <label>
-          Inicio del periodo
+          {{ t('Inicio del periodo') }}
           <input type="date" name="starts_on" required>
         </label>
         <label>
-          Medido por la compania (kWh)
-          <input type="number" step="0.001" name="utility_measured_kwh" placeholder="Opcional">
+          {{ t('Medido por la compania (kWh)') }}
+          <input type="number" step="0.001" name="utility_measured_kwh" placeholder="{{ t('Opcional') }}">
         </label>
         <label class="checkbox-label">
           <input type="checkbox" name="has_inverter_data_issue">
-          Marcar error de medicion del inversor en este periodo
+          {{ t('Marcar error de medicion del inversor en este periodo') }}
         </label>
         <label>
-          Notas
-          <textarea name="notes" rows="4" placeholder="Lectura de medidor del dia 19"></textarea>
+          {{ t('Notas') }}
+          <textarea name="notes" rows="4" placeholder="{{ t('Lectura de medidor del dia 19') }}"></textarea>
         </label>
-        <p class="muted">Despues de guardar, podras ajustar los precios y los cargos fijos del mes cuando llegue la factura.</p>
-        <button type="submit" class="primary-button">Guardar periodo</button>
+        <p class="muted">{{ t('Despues de guardar, podras ajustar los precios y los cargos fijos del mes cuando llegue la factura.') }}</p>
+        <button type="submit" class="primary-button">{{ t('Guardar periodo') }}</button>
       </form>
     </article>
 
     <article class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Listado</p>
-          <h2>Periodos creados</h2>
+          <p class="eyebrow">{{ t('Listado') }}</p>
+          <h2>{{ t('Periodos creados') }}</h2>
         </div>
       </div>
       {% if periods %}
@@ -73,31 +64,39 @@
             <div class="list-card">
               <div>
                 <strong>{{ period.name }}</strong>
-                <p>Inicio: {{ period.starts_on }}</p>
+                <p>{{ t('Inicio: {value}', value=period.starts_on) }}</p>
                 {% if period.utility_measured_kwh is not none %}
-                  <p>Medido por compania: {{ period.utility_measured_kwh | kwh }} kWh</p>
+                  <p>{{ t('Medido por compania: {value} kWh', value=kwh_text(period.utility_measured_kwh)) }}</p>
                 {% endif %}
                 {% if period.has_inverter_data_issue %}
-                  <p><span class="badge badge-warning">Error manual de medicion</span></p>
+                  <p><span class="badge badge-warning">{{ t('Error manual de medicion') }}</span></p>
                 {% endif %}
                 {% if summary and summary.has_missing_days %}
-                  <p><span class="badge badge-warning">Faltan {{ summary.missing_day_count }} dias sin medicion</span></p>
+                  <p>
+                    <span class="badge badge-warning">
+                      {% if summary.missing_day_count == 1 %}
+                        {{ t('Falta 1 dia sin medicion') }}
+                      {% else %}
+                        {{ t('Faltan {count} dias sin medicion', count=summary.missing_day_count) }}
+                      {% endif %}
+                    </span>
+                  </p>
                 {% endif %}
                 {% if period.notes %}
                   <p>{{ period.notes }}</p>
                 {% endif %}
               </div>
               <div class="inline-actions">
-                <a class="ghost-button inline-button" href="{{ url_for('period_detail', period_id=period.id) }}">Ver detalle</a>
+                <a class="ghost-button inline-button" href="{{ url_for('period_detail', period_id=period.id) }}">{{ t('Ver detalle') }}</a>
                 <form method="post" action="{{ url_for('delete_period', period_id=period.id) }}">
-                  <button type="submit" class="danger-button">Eliminar</button>
+                  <button type="submit" class="danger-button">{{ t('Eliminar') }}</button>
                 </form>
               </div>
             </div>
           {% endfor %}
         </div>
       {% else %}
-        <p class="muted">Todavia no hay periodos cargados.</p>
+        <p class="muted">{{ t('Todavia no hay periodos cargados.') }}</p>
       {% endif %}
     </article>
   </section>

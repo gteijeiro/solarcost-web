@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}{{ t('Dashboard') }}{% endblock %}
 {% block content %}
   {% if bridge_status or bridge_error %}
     <section class="bridge-rail {{ 'bridge-rail-danger' if bridge_error else 'bridge-rail-ok' }}">
       <span class="bridge-pill {{ 'bridge-pill-danger' if bridge_error else ('bridge-pill-ok' if bridge_status and bridge_status.connected else 'bridge-pill-warn') }}">
-        {{ 'Sin bridge' if bridge_error else ('Conectado' if bridge_status and bridge_status.connected else 'Degradado') }}
+        {{ t('Sin bridge') if bridge_error else (t('Conectado') if bridge_status and bridge_status.connected else t('Degradado')) }}
       </span>
       {% if bridge_status %}
-        <span>Ultimo dato: <strong>{{ bridge_status.last_message_at | datetime_local }}</strong></span>
+        <span>{{ t('Ultimo dato:') }} <strong>{{ bridge_status.last_message_at | datetime_local }}</strong></span>
       {% endif %}
       {% if bridge_error %}
         <span>{{ bridge_error }}</span>
@@ -17,72 +17,74 @@
 
   {% if not periods %}
     <section class="panel empty-state">
-      <h2>No hay periodos configurados</h2>
-      <p>Empieza creando el primer periodo de facturacion para delimitar el consumo a calcular.</p>
-      <a class="primary-button inline-button" href="{{ url_for('periods') }}">Ir a periodos</a>
+      <h2>{{ t('No hay periodos configurados') }}</h2>
+      <p>{{ t('Empieza creando el primer periodo de facturacion para delimitar el consumo a calcular.') }}</p>
+      <a class="primary-button inline-button" href="{{ url_for('periods') }}">{{ t('Ir a periodos') }}</a>
     </section>
   {% else %}
     {% if current_summary %}
       <section class="summary-strip">
         <article class="metric-card metric-card-period">
-          <span class="metric-label">Periodo actual</span>
+          <span class="metric-label">{{ t('Periodo actual') }}</span>
           <strong>{{ current_summary.period.name }}</strong>
-          <span>{{ current_summary.period.effective_start }} a {{ current_summary.period.effective_end }}</span>
+          <span>{{ current_summary.period.effective_start }} - {{ current_summary.period.effective_end }}</span>
         </article>
         <article class="metric-card metric-card-money">
-          <span class="metric-label">Costo total factura</span>
+          <span class="metric-label">{{ t('Costo total factura') }}</span>
           <strong>{{ current_summary.total | money }}</strong>
-          <span>Servicio + IVA y otros conceptos</span>
+          <span>{{ t('Servicio + IVA y otros conceptos') }}</span>
         </article>
         <article class="metric-card metric-card-money">
-          <span class="metric-label">Costo total energia</span>
+          <span class="metric-label">{{ t('Costo total energia') }}</span>
           <strong>{{ current_summary.service_total | money }}</strong>
-          <span>Energia + cargos y formulas de servicio</span>
+          <span>{{ t('Energia + cargos y formulas de servicio') }}</span>
         </article>
         <article class="metric-card metric-card-money">
-          <span class="metric-label">Energia electrica</span>
+          <span class="metric-label">{{ t('Energia electrica') }}</span>
           <strong>{{ current_summary.energy_cost | money }}</strong>
-          <span>Tarifa {{ current_summary.config_source.bands_scope }}</span>
+          <span>{{ t('Tarifa {scope} con {label}', scope=current_summary.config_source.bands_scope, label=current_summary.selected_variant.label | lower) }}</span>
         </article>
         <article class="metric-card metric-card-kwh">
-          <span class="metric-label">Red</span>
+          <span class="metric-label">{{ t('Red') }}</span>
           <strong>{{ current_summary.inverter_consumption_kwh | kwh }} kWh</strong>
-          <span>{{ current_summary.daily_points | length }} dias con registro</span>
+          <span>{{ current_summary.daily_points | length }} {{ t('dias') }} con registro</span>
         </article>
         <article class="metric-card metric-card-kwh">
-          <span class="metric-label">Compania</span>
-          <strong>{% if current_summary.utility_consumption_kwh is not none %}{{ current_summary.utility_consumption_kwh | kwh }} kWh{% else %}Sin dato{% endif %}</strong>
+          <span class="metric-label">{{ t('Compania') }}</span>
+          <strong>{% if current_summary.utility_consumption_kwh is not none %}{{ current_summary.utility_consumption_kwh | kwh }} kWh{% else %}{{ t('Sin dato') }}{% endif %}</strong>
           <span>
             {% if current_summary.consumption_difference_kwh is not none %}
-              Diferencia: {{ current_summary.consumption_difference_kwh | kwh }} kWh
+              {{ t('Diferencia: {value} kWh', value=kwh_text(current_summary.consumption_difference_kwh)) }}
             {% else %}
-              Aun no cargaste la lectura real
+              {{ t('Aun no cargaste la lectura real') }}
             {% endif %}
           </span>
         </article>
         <article class="metric-card metric-card-kwh">
-          <span class="metric-label">Consumo facturable</span>
+          <span class="metric-label">{{ t('Consumo facturable') }}</span>
           <strong>{{ current_summary.billing_consumption_kwh | kwh }} kWh</strong>
-          <span>{% if current_summary.consumption_source == 'utility' %}Tomado de la compania{% else %}Tomado de la red del inversor{% endif %}</span>
+          <span>{{ t('Tomado de la compania') if current_summary.consumption_source == 'utility' else t('Tomado de la red del inversor') }}</span>
         </article>
         <article class="metric-card metric-card-neutral">
-          <span class="metric-label">Cobertura</span>
+          <span class="metric-label">{{ t('Cobertura') }}</span>
           <strong>{{ current_summary.coverage_observed_day_count }}/{{ current_summary.coverage_expected_day_count }}</strong>
-          <span>Dias con medicion considerados para validar</span>
+          <span>{{ t('Dias con medicion considerados para validar') }}</span>
         </article>
         {% if yearly_change %}
           <article class="metric-card metric-card-inflation">
-            <span class="metric-label">Variacion anual</span>
-            <strong>Hasta 12 meses</strong>
-            <span>Comparado con {{ yearly_change.baseline_period_name }}</span>
+            <span class="metric-label">{{ t('Variacion anual') }}</span>
+            <strong>{{ t('Hasta 12 meses') }}</strong>
+            <span>{{ t('Comparado con {period_name}', period_name=yearly_change.baseline_period_name) }}</span>
             <span class="metric-subvalue">
-              Tarifas: {% if yearly_change.energy_rate_change_percent is not none %}{{ yearly_change.energy_rate_change_percent | percent }}{% else %}n/d{% endif %}
+              {{ t('Tarifas:') }}
+              {% if yearly_change.energy_rate_change_percent is not none %}{{ yearly_change.energy_rate_change_percent | percent }}{% else %}{{ t('n/d') }}{% endif %}
               {% if yearly_change.energy_rate_baseline > 0 %}
                 | {{ yearly_change.energy_rate_baseline | money }}/kWh -> {{ yearly_change.energy_rate_current | money }}/kWh
               {% endif %}
             </span>
             <span class="metric-subvalue">
-              Cargos fijos: {% if yearly_change.fixed_total_change_percent is not none %}{{ yearly_change.fixed_total_change_percent | percent }}{% else %}n/d{% endif %}
+              {{ t('Cargos fijos:') }}
+              {% if yearly_change.fixed_total_change_percent is not none %}{{ yearly_change.fixed_total_change_percent | percent }}{% else %}{{ t('n/d') }}{% endif %}
               {% if yearly_change.fixed_total_baseline > 0 %}
                 | {{ yearly_change.fixed_total_baseline | money }} -> {{ yearly_change.fixed_total_current | money }}
               {% endif %}
@@ -90,8 +92,8 @@
           </article>
         {% endif %}
         <article class="metric-card metric-card-warning">
-          <span class="metric-label">Integridad inversor</span>
-          <strong>{{ 'Revisar' if current_summary.has_inverter_issue else 'OK' }}</strong>
+          <span class="metric-label">{{ t('Integridad inversor') }}</span>
+          <strong>{{ t('Revisar') if current_summary.has_inverter_issue else t('OK') }}</strong>
           <span>{{ current_summary.inverter_issue_summary }}</span>
         </article>
       </section>
@@ -100,59 +102,59 @@
     <section class="panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Periodos</p>
-          <h2>Detalle calculado</h2>
+          <p class="eyebrow">{{ t('Periodos') }}</p>
+          <h2>{{ t('Detalle calculado') }}</h2>
         </div>
         {% if can_manage %}
-          <a class="ghost-button inline-button" href="{{ url_for('periods') }}">Administrar periodos</a>
+          <a class="ghost-button inline-button" href="{{ url_for('periods') }}">{{ t('Administrar periodos') }}</a>
         {% endif %}
       </div>
       <div class="table-shell">
         <table class="responsive-detail-table">
           <thead>
             <tr>
-              <th>Periodo</th>
-              <th>Rango</th>
-              <th>Red</th>
-              <th>Compania</th>
-              <th>Facturable</th>
-              <th>Medicion</th>
-              <th>Energia electrica</th>
-              <th>Total servicio</th>
-              <th>IVA y otros</th>
-              <th>Total</th>
+              <th>{{ t('Periodo') }}</th>
+              <th>{{ t('Rango') }}</th>
+              <th>{{ t('Red') }}</th>
+              <th>{{ t('Compania') }}</th>
+              <th>{{ t('Facturable') }}</th>
+              <th>{{ t('Medicion') }}</th>
+              <th>{{ t('Energia electrica') }}</th>
+              <th>{{ t('Total servicio') }}</th>
+              <th>{{ t('IVA y otros') }}</th>
+              <th>{{ t('Total') }}</th>
             </tr>
           </thead>
           <tbody>
             {% for summary in summaries %}
               <tr>
-                <td data-label="Periodo">
+                <td data-label="{{ t('Periodo') }}">
                   <a href="{{ url_for('period_detail', period_id=summary.period.id) }}">{{ summary.period.name }}</a>
                   {% if summary.period.is_open %}
-                    <span class="pill">Abierto</span>
+                    <span class="pill">{{ t('Abierto') }}</span>
                   {% endif %}
                   {% if summary.has_inverter_issue %}
-                    <span class="badge badge-warning">Revisar</span>
+                    <span class="badge badge-warning">{{ t('Revisar') }}</span>
                   {% endif %}
                 </td>
-                <td data-label="Rango">{{ summary.period.effective_start }} a {{ summary.period.effective_end }}</td>
-                <td data-label="Red">{{ summary.inverter_consumption_kwh | kwh }} kWh</td>
-                <td data-label="Compania">
+                <td data-label="{{ t('Rango') }}">{{ summary.period.effective_start }} - {{ summary.period.effective_end }}</td>
+                <td data-label="{{ t('Red') }}">{{ summary.inverter_consumption_kwh | kwh }} kWh</td>
+                <td data-label="{{ t('Compania') }}">
                   {% if summary.utility_consumption_kwh is not none %}
                     {{ summary.utility_consumption_kwh | kwh }} kWh
                   {% else %}
-                    Sin dato
+                    {{ t('Sin dato') }}
                   {% endif %}
                 </td>
-                <td data-label="Facturable">{{ summary.billing_consumption_kwh | kwh }} kWh</td>
-                <td data-label="Medicion">
-                  <strong>{{ 'Revisar' if summary.has_inverter_issue else 'OK' }}</strong><br>
+                <td data-label="{{ t('Facturable') }}">{{ summary.billing_consumption_kwh | kwh }} kWh</td>
+                <td data-label="{{ t('Medicion') }}">
+                  <strong>{{ t('Revisar') if summary.has_inverter_issue else t('OK') }}</strong><br>
                   <small>{{ summary.inverter_issue_summary }}</small>
                 </td>
-                <td data-label="Energia electrica">{{ summary.energy_cost | money }}</td>
-                <td data-label="Total servicio">{{ summary.service_total | money }}</td>
-                <td data-label="IVA y otros">{{ summary.other_concepts_total | money }}</td>
-                <td data-label="Total"><strong>{{ summary.total | money }}</strong></td>
+                <td data-label="{{ t('Energia electrica') }}">{{ summary.energy_cost | money }}</td>
+                <td data-label="{{ t('Total servicio') }}">{{ summary.service_total | money }}</td>
+                <td data-label="{{ t('IVA y otros') }}">{{ summary.other_concepts_total | money }}</td>
+                <td data-label="{{ t('Total') }}"><strong>{{ summary.total | money }}</strong></td>
               </tr>
             {% endfor %}
           </tbody>
@@ -164,13 +166,13 @@
       <section class="panel chart-collection" data-chart-collection>
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Graficos</p>
-            <h2>Comparativos por periodo</h2>
-            <p>Puedes alternar entre barras y una vista de area similar a la del inversor.</p>
+            <p class="eyebrow">{{ t('Graficos') }}</p>
+            <h2>{{ t('Comparativos por periodo') }}</h2>
+            <p>{{ t('Puedes alternar entre barras y una vista de area similar a la del inversor.') }}</p>
           </div>
           <div class="toggle-group">
-            <button type="button" class="toggle-button" data-chart-mode-button="bar" aria-pressed="false">Barras</button>
-            <button type="button" class="toggle-button is-active" data-chart-mode-button="area" aria-pressed="true">Area</button>
+            <button type="button" class="toggle-button" data-chart-mode-button="bar" aria-pressed="false">{{ t('Barras') }}</button>
+            <button type="button" class="toggle-button is-active" data-chart-mode-button="area" aria-pressed="true">{{ t('Area') }}</button>
           </div>
         </div>
         <div class="chart-grid">
