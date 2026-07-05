@@ -117,6 +117,29 @@ sa_web run
 
 La web queda por defecto en `http://127.0.0.1:8890`.
 
+## API JSON (integraciones, ej. Home Assistant)
+
+Ademas de la interfaz web, hay una API de solo lectura protegida por token,
+pensada para integraciones automaticas que no pueden usar el login por cookie.
+
+Se habilita definiendo `SA_COSTS_API_TOKEN` con un valor largo y unico
+(si queda vacia, la API responde `404 api_disabled`).
+
+Endpoints:
+
+- `GET /api/current-period` — resumen del periodo de facturacion en curso.
+- `GET /api/periods` — todos los periodos configurados.
+
+Autenticacion por cabecera `Authorization: Bearer <token>` (o `?token=<token>`).
+
+```bash
+curl -H "Authorization: Bearer TU_TOKEN" http://127.0.0.1:8890/api/current-period
+```
+
+Devuelve importes (`total`, `energy_cost`, `fixed_total`, `tax_total`, `subtotal`),
+consumos (`consumption_kwh`, `load_kwh`, `solar_pv_kwh`), `average_price_per_kwh`,
+metadatos del periodo y los desgloses por seccion.
+
 ## Actualizacion
 
 ```bash

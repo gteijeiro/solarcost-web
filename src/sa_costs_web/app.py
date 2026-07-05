@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import hmac
 import json
 import logging
 import re
@@ -18,6 +19,7 @@ from flask import (
     current_app,
     flash,
     has_request_context,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -274,6 +276,10 @@ def create_app(config: WebConfig) -> Flask:
     def require_setup_when_empty() -> Any:
         endpoint = request.endpoint or ""
         if endpoint == "static":
+            return None
+        # Los endpoints JSON de la API se autentican por token, no por sesion
+        # de usuario, asi que no deben pasar por el flujo de setup/login web.
+        if endpoint.startswith("api_"):
             return None
         if get_repo().user_count() == 0 and endpoint != "setup":
             return redirect(url_for("setup"))
@@ -836,6 +842,31 @@ def create_app(config: WebConfig) -> Flask:
         flash(tr("Regla del periodo eliminada."), "success")
         return redirect(url_for("period_detail", period_id=period_id))
 
+    @app.route("/api/current-period")
+    @api_token_required
+    def api_current_period() -> Any:
+        periods = get_repo().list_billing_periods()
+        data = build_dashboard_data(periods)
+        if data.bridge_error:
+            return jsonify({"error": "bridge_unavailable", "detail": data.bridge_error}), 502
+        if not data.summaries:
+            return jsonify({"error": "no_periods"}), 404
+        payload = build_api_period_payload(data.summaries[0])
+        payload["bridge_status"] = data.bridge_data.status if data.bridge_data else None
+        return jsonify(payload)
+
+    @app.route("/api/periods")
+    @api_token_required
+    def api_periods() -> Any:
+        periods = get_repo().list_billing_periods()
+        data = build_dashboard_data(periods)
+        if data.bridge_error:
+            return jsonify({"error": "bridge_unavailable", "detail": data.bridge_error}), 502
+        return jsonify({
+            "bridge_status": data.bridge_data.status if data.bridge_data else None,
+            "periods": [build_api_period_payload(summary) for summary in data.summaries],
+        })
+
     return app
 
 
@@ -861,6 +892,102 @@ def admin_required(view: Callable[..., Any]) -> Callable[..., Any]:
         return view(*args, **kwargs)
 
     return wrapped
+
+
+def api_token_required(view: Callable[..., Any]) -> Callable[..., Any]:
+    """Protege endpoints JSON con un token estatico (Authorization: Bearer ...).
+
+    Pensado para integraciones automaticas (ej. Home Assistant) que no pueden
+    usar el login por cookie. Si no hay token configurado la API queda deshabilitada.
+    """
+
+    @wraps(view)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        expected = get_web_config().api_token
+        if not expected:
+            return jsonify({"error": "api_disabled"}), 404
+        provided = ""
+        header = request.headers.get("Authorization", "")
+        if header.startswith("Bearer "):
+            provided = header[len("Bearer "):].strip()
+        elif "token" in request.args:
+            provided = str(request.args.get("token") or "")
+        if not provided or not hmac.compare_digest(provided, expected):
+            return jsonify({"error": "unauthorized"}), 401
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def _api_number(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        return round(float(value), 4)
+    except (TypeError, ValueError):
+        return None
+
+
+def build_api_period_payload(summary: dict[str, Any]) -> dict[str, Any]:
+    """Aplana un resumen de periodo a un JSON estable para integraciones.
+
+    Expone todos los importes y consumos configurados del periodo. Los desgloses
+    (secciones, energia, cargos, impuestos) van como listas anidadas para que HA
+    los pueda leer como atributos.
+    """
+
+    period = summary.get("period") or {}
+    selected = summary.get("selected_variant") or {}
+
+    def sections(breakdown: Any) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        if isinstance(breakdown, list):
+            for item in breakdown:
+                if not isinstance(item, dict):
+                    continue
+                result.append({
+                    "name": item.get("name") or item.get("label") or item.get("alias"),
+                    "amount": _api_number(item.get("amount") if item.get("amount") is not None else item.get("total")),
+                })
+        return result
+
+    return {
+        "period_id": period.get("id"),
+        "period_name": period.get("name"),
+        "period_start": period.get("effective_start"),
+        "period_end": period.get("effective_end"),
+        "is_open": bool(period.get("is_open")),
+        "billing_source": summary.get("consumption_source"),
+        "consumption_kwh": _api_number(summary.get("consumption_kwh")
+                                        if summary.get("consumption_kwh") is not None
+                                        else selected.get("consumption_kwh")),
+        "inverter_consumption_kwh": _api_number(summary.get("inverter_consumption_kwh")),
+        "utility_consumption_kwh": _api_number(summary.get("utility_consumption_kwh")),
+        "load_kwh": _api_number(summary.get("inverter_load_kwh")),
+        "solar_pv_kwh": _api_number(summary.get("solar_pv_kwh")),
+        "solar_savings_total": _api_number(summary.get("solar_savings_total")),
+        "energy_cost": _api_number(summary.get("energy_cost")),
+        "fixed_total": _api_number(summary.get("fixed_total")),
+        "tax_total": _api_number(summary.get("tax_total")),
+        "service_total": _api_number(summary.get("service_total")),
+        "other_concepts_total": _api_number(summary.get("other_concepts_total")),
+        "subtotal": _api_number(summary.get("subtotal")),
+        "total": _api_number(summary.get("total")),
+        "average_price_per_kwh": _api_number(
+            (float(summary["total"]) / float(summary["consumption_kwh"]))
+            if summary.get("total") not in (None, "")
+            and summary.get("consumption_kwh") not in (None, "", 0, 0.0)
+            else None
+        ),
+        "has_missing_days": bool(summary.get("has_missing_days")),
+        "has_inverter_issue": bool(summary.get("has_inverter_issue")),
+        "missing_day_count": summary.get("missing_day_count"),
+        "section_totals": summary.get("section_totals"),
+        "sections": sections(summary.get("section_breakdowns")),
+        "energy_breakdown": sections(summary.get("energy_breakdown")),
+        "fixed_breakdown": sections(summary.get("fixed_breakdown")),
+        "tax_breakdown": sections(summary.get("tax_breakdown")),
+    }
 
 
 def get_repo() -> CostsRepository:

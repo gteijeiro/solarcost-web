@@ -19,6 +19,7 @@ class WebConfig:
     secret_key: str
     log_level: str
     http_timeout: float
+    api_token: str = ""
 
     @classmethod
     def from_args(cls, argv: list[str] | None = None) -> "WebConfig":
@@ -42,6 +43,10 @@ class WebConfig:
             type=float,
             default=float(os.getenv("SA_COSTS_HTTP_TIMEOUT", "10")),
         )
+        parser.add_argument(
+            "--api-token",
+            default=os.getenv("SA_COSTS_API_TOKEN", ""),
+        )
         args = parser.parse_args(argv)
 
         return cls(
@@ -52,4 +57,5 @@ class WebConfig:
             secret_key=args.secret_key,
             log_level=args.log_level.upper(),
             http_timeout=args.http_timeout,
+            api_token=args.api_token.strip(),
         )

@@ -990,5 +990,97 @@ class WebUninstallTests(unittest.TestCase):
         self.assertIn("command -v sa_web", help_text)
 
 
+class ApiEndpointTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.db_path = Path(self.tmp_dir.name) / "energy_costs.sqlite3"
+        self.token = "token-de-prueba-largo"
+        self.config = WebConfig(
+            bridge_url="http://bridge.local",
+            bind_host="127.0.0.1",
+            bind_port=8890,
+            db_path=self.db_path,
+            secret_key="test-secret",
+            log_level="INFO",
+            http_timeout=1.0,
+            api_token=self.token,
+        )
+        self.app = create_app(self.config)
+        self.app.testing = True
+        with self.app.app_context():
+            repo = self.app.extensions["repo"]
+            period_id = repo.save_billing_period(
+                period_id=None,
+                name="Factura abril 2026",
+                starts_on="2026-04-01",
+                utility_measured_kwh=None,
+                has_inverter_data_issue=False,
+                billing_source="inverter",
+                notes="",
+            )
+            repo.save_tariff_band(
+                band_id=None, scope="period", billing_period_id=period_id, position=1,
+                label="General", from_kwh=0.0, to_kwh=None, price_per_kwh=2.0,
+            )
+            repo.save_charge_rule(
+                rule_id=None, scope="period", billing_period_id=period_id, position=1,
+                kind="fixed", section="service", name="Cargo fijo", alias="cargo_fijo",
+                expression=None, amount=40.0, show_on_dashboard=True, enabled=True,
+            )
+        self.client = self.app.test_client()
+        self.bridge_data = BridgeData(
+            status={"connected": True, "last_message_at": "2026-04-11T00:00:00+00:00", "topic": "daily-data"},
+            points=[
+                {"iso": "2026-04-05T00:00:00-03:00", "grid_kwh": 50.0, "load_kwh": 76.0, "solar_pv_kwh": 18.0},
+                {"iso": "2026-04-09T00:00:00-03:00", "grid_kwh": 70.0, "load_kwh": 84.0, "solar_pv_kwh": 22.0},
+            ],
+        )
+
+    def tearDown(self) -> None:
+        self.tmp_dir.cleanup()
+
+    def test_api_requires_token(self) -> None:
+        with patch("sa_costs_web.app.fetch_bridge_data", return_value=self.bridge_data):
+            self.assertEqual(self.client.get("/api/current-period").status_code, 401)
+            self.assertEqual(
+                self.client.get("/api/current-period", headers={"Authorization": "Bearer mal"}).status_code,
+                401,
+            )
+
+    def test_api_current_period_returns_payload(self) -> None:
+        with patch("sa_costs_web.app.fetch_bridge_data", return_value=self.bridge_data):
+            response = self.client.get(
+                "/api/current-period", headers={"Authorization": f"Bearer {self.token}"}
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["period_name"], "Factura abril 2026")
+        self.assertTrue(payload["is_open"])
+        for key in ("total", "energy_cost", "fixed_total", "consumption_kwh", "average_price_per_kwh"):
+            self.assertIn(key, payload)
+        self.assertIsInstance(payload["sections"], list)
+
+    def test_api_periods_lists_all(self) -> None:
+        with patch("sa_costs_web.app.fetch_bridge_data", return_value=self.bridge_data):
+            response = self.client.get(
+                "/api/periods", headers={"Authorization": f"Bearer {self.token}"}
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertIn("periods", payload)
+        self.assertGreaterEqual(len(payload["periods"]), 1)
+
+    def test_api_disabled_without_token_config(self) -> None:
+        config = WebConfig(
+            bridge_url="http://bridge.local", bind_host="127.0.0.1", bind_port=8890,
+            db_path=self.db_path, secret_key="test-secret", log_level="INFO",
+            http_timeout=1.0, api_token="",
+        )
+        app = create_app(config)
+        app.testing = True
+        client = app.test_client()
+        self.assertEqual(client.get("/api/current-period").status_code, 404)
+
+
 if __name__ == "__main__":
     unittest.main()
