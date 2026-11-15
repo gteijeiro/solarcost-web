@@ -148,3 +148,24 @@ source .venv/bin/activate
 python -m pip install --upgrade solarcost-web
 sudo systemctl restart solarcost-web.service
 ```
+
+## Configuracion local desde el codigo fuente
+
+La configuracion personal no se versiona. Copia `.env.example` a `.env.local`,
+ajusta la URL del bridge y la ruta de la base de datos a tu equipo y reemplaza
+`SA_COSTS_SECRET_KEY` por un secreto largo y unico antes de usarlo.
+La aplicacion lee variables de entorno; no carga `.env.local` automaticamente:
+
+```bash
+cp .env.example .env.local
+# Edita .env.local antes de continuar.
+set -a
+. ./.env.local
+set +a
+sa_web run
+```
+
+No publiques `.env.local`, `solarcost-web.env`, tokens ni secretos reales.
+Si ya tenias configuracion local, guardala fuera del checkout antes de actualizar
+para no perderla al retirar el antiguo archivo versionado. Los valores antiguos
+permanecen en el historial de Git; esta limpieza no reescribe ese historial.
